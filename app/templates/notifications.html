@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-bell me-2"></i>Notifications</h1>
+    <div>
+        {% if stats.unread > 0 %}
+        <form method="POST" action="{{ url_for('notification.mark_all_as_read') }}" class="d-inline">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-check-all me-1"></i>Tout marquer comme lu
+            </button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('notification.delete_read_notifications') }}" class="d-inline"
+              onsubmit="return confirm('Supprimer toutes les notifications lues ?');">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Supprimer les lues
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-primary text-white">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Notifications non lues</span>
+                    <h3 class="mb-0">{{ stats.unread }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Total des notifications</span>
+                    <h3 class="mb-0">{{ stats.total }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('notification.list_notifications') }}" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Type</label>
+                <select class="form-select" name="type">
+                    <option value="">Tous les types</option>
+                    {% for key, label in notification_types.items() %}
+                    <option value="{{ key }}" {% if filter_type == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Statut</label>
+                <select class="form-select" name="unread">
+                    <option value="">Toutes</option>
+                    <option value="1" {% if unread_only %}selected{% endif %}>Non lues uniquement</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-filter me-1"></i>Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des notifications -->
+{% if notifications.items %}
+<div class="list-group">
+    {% for notif in notifications.items %}
+    <div class="list-group-item {% if not notif.is_read %}list-group-item-light border-start border-{{ notif.priority_color }} border-3{% endif %}">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex align-items-start flex-grow-1">
+                <div class="me-3">
+                    <i class="bi {{ notif.icon }} text-{{ notif.priority_color }}" style="font-size: 1.5rem;"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-1">
+                        <strong class="{{ '' if notif.is_read else 'fw-bold' }}">{{ notif.title }}</strong>
+                        {% if not notif.is_read %}
+                        <span class="badge bg-primary ms-2">Nouveau</span>
+                        {% endif %}
+                        <span class="badge bg-{{ notif.priority_color }} ms-2">{{ notif.priority }}</span>
+                    </div>
+                    <p class="mb-1 text-muted">{{ notif.message }}</p>
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>{{ notif.time_ago }}
+                        {% if notif.type_label %}
+                        | <span class="badge bg-secondary">{{ notif.type_label }}</span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            <div class="btn-group btn-group-sm ms-3">
+                {% if notif.document_id %}
+                <a href="{{ url_for('document.view', document_id=notif.document_id) }}" class="btn btn-outline-primary" title="Voir le document">
+                    <i class="bi bi-file-earmark"></i>
+                </a>
+                {% endif %}
+                {% if notif.task_id %}
+                <a href="{{ url_for('task.view', task_id=notif.task_id) }}" class="btn btn-outline-info" title="Voir la tache">
+                    <i class="bi bi-check2-square"></i>
+                </a>
+                {% endif %}
+                {% if notif.is_read %}
+                <form method="POST" action="{{ url_for('notification.mark_as_unread', notification_id=notif.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-outline-secondary" title="Marquer comme non lu">
+                        <i class="bi bi-envelope"></i>
+                    </button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('notification.mark_as_read', notification_id=notif.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-outline-success" title="Marquer comme lu">
+                        <i class="bi bi-envelope-open"></i>
+                    </button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{{ url_for('notification.delete_notification', notification_id=notif.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if notifications.pages > 1 %}
+<nav aria-label="Pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if notifications.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('notification.list_notifications', page=notifications.prev_num, type=filter_type, unread=unread_only|int) }}">Precedent</a>
+        </li>
+        {% endif %}
+        {% for page in notifications.iter_pages() %}
+            {% if page %}
+            <li class="page-item {{ 'active' if page == notifications.page else '' }}">
+                <a class="page-link" href="{{ url_for('notification.list_notifications', page=page, type=filter_type, unread=unread_only|int) }}">{{ page }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        {% if notifications.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('notification.list_notifications', page=notifications.next_num, type=filter_type, unread=unread_only|int) }}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-bell-slash text-muted" style="font-size: 4rem;"></i>
+    <h4 class="mt-3">Aucune notification</h4>
+    <p class="text-muted">Vous n'avez pas de notifications pour le moment</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Historique d'activite - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-clock-history me-2"></i>Mon historique d'activite</h1>
+</div>
+
+{% if logs.items %}
+<div class="list-group">
+    {% for log in logs.items %}
+    <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-circle-fill me-2 text-{{ 'success' if 'login' in log.action else ('primary' if 'document' in log.action else 'secondary') }}" style="font-size: 0.5rem;"></i>
+                <strong>{{ log.action_label }}</strong>
+                {% if log.details %}
+                <br><small class="text-muted ms-3">{{ log.details }}</small>
+                {% endif %}
+            </div>
+            <small class="text-muted">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if logs.pages > 1 %}
+<nav aria-label="Pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if logs.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('user.activity', page=logs.prev_num) }}">Precedent</a>
+        </li>
+        {% endif %}
+        {% for page in logs.iter_pages() %}
+            {% if page %}
+            <li class="page-item {{ 'active' if page == logs.page else '' }}">
+                <a class="page-link" href="{{ url_for('user.activity', page=page) }}">{{ page }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        {% if logs.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('user.activity', page=logs.next_num) }}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
+    <h4 class="mt-3">Aucune activite</h4>
+    <p class="text-muted">Votre historique d'activite apparaitra ici</p>
+</div>
+{% endif %}
+{% endblock %}

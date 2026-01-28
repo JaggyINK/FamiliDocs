@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Sauvegardes - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-cloud-arrow-up me-2"></i>Sauvegardes</h1>
+</div>
+
+<!-- Creer une sauvegarde -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-plus-circle me-2"></i>Creer une nouvelle sauvegarde
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.create_backup') }}" class="row align-items-center">
+            <div class="col-auto">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="include_files" name="include_files" checked>
+                    <label class="form-check-label" for="include_files">Inclure les fichiers uploades</label>
+                </div>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-cloud-arrow-up me-2"></i>Creer la sauvegarde
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des sauvegardes -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-archive me-2"></i>Sauvegardes disponibles
+    </div>
+    <div class="card-body">
+        {% if backups %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Fichier</th>
+                        <th>Taille</th>
+                        <th>Date de creation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in backups %}
+                    <tr>
+                        <td><i class="bi bi-file-zip me-2"></i>{{ backup.filename }}</td>
+                        <td>{{ (backup.size / 1024 / 1024)|round(2) }} Mo</td>
+                        <td>{{ backup.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <form method="POST" action="{{ url_for('admin.restore_backup') }}" class="d-inline"
+                                      onsubmit="return confirm('Etes-vous sur de vouloir restaurer cette sauvegarde ? Cette action est irreversible.');">
+                                    <input type="hidden" name="backup_path" value="{{ backup.path }}">
+                                    <button type="submit" class="btn btn-outline-warning" title="Restaurer">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.delete_backup') }}" class="d-inline"
+                                      onsubmit="return confirm('Supprimer cette sauvegarde ?');">
+                                    <input type="hidden" name="backup_path" value="{{ backup.path }}">
+                                    <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center mb-0">Aucune sauvegarde disponible</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
