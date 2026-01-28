@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-house-door me-2"></i>Tableau de bord</h1>
+    <div>
+        <a href="{{ url_for('document.upload') }}" class="btn btn-primary">
+            <i class="bi bi-upload me-2"></i>Ajouter un document
+        </a>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ stats.total_documents }}</h3>
+                        <small>Documents</small>
+                    </div>
+                    <i class="bi bi-file-earmark-text" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ stats.total_folders }}</h3>
+                        <small>Dossiers</small>
+                    </div>
+                    <i class="bi bi-folder" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ stats.pending_tasks }}</h3>
+                        <small>Taches en attente</small>
+                    </div>
+                    <i class="bi bi-check2-square" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ stats.shared_documents }}</h3>
+                        <small>Documents partages</small>
+                    </div>
+                    <i class="bi bi-share" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Taches en retard -->
+    {% if overdue_tasks %}
+    <div class="col-12 mb-4">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-exclamation-triangle me-2"></i>Taches en retard
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for task in overdue_tasks %}
+                    <a href="{{ url_for('task.view', task_id=task.id) }}" class="list-group-item list-group-item-action list-group-item-danger">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ task.title }}</strong>
+                                <br><small>Echeance: {{ task.due_date.strftime('%d/%m/%Y') }}</small>
+                            </div>
+                            <span class="badge bg-danger">{{ task.days_until_due|abs }} jours de retard</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Documents récents -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>Documents recents
+            </div>
+            <div class="card-body">
+                {% if recent_documents %}
+                <div class="list-group list-group-flush">
+                    {% for doc in recent_documents %}
+                    <a href="{{ url_for('document.view', document_id=doc.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-earmark me-2"></i>{{ doc.name }}
+                                <br><small class="text-muted">{{ doc.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                            <span class="badge bg-secondary">{{ doc.file_type }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucun document</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('document.list_documents') }}" class="btn btn-sm btn-outline-primary">
+                    Voir tous les documents
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taches a venir -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-calendar-event me-2"></i>Taches a venir
+            </div>
+            <div class="card-body">
+                {% if upcoming_tasks %}
+                <div class="list-group list-group-flush">
+                    {% for task in upcoming_tasks %}
+                    <a href="{{ url_for('task.view', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-check2-square me-2"></i>{{ task.title }}
+                                <br><small class="text-muted">Echeance: {{ task.due_date.strftime('%d/%m/%Y') }}</small>
+                            </div>
+                            <span class="badge bg-{{ task.priority_color }}">{{ task.priority }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucune tache a venir</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('task.list_tasks') }}" class="btn btn-sm btn-outline-primary">
+                    Voir toutes les taches
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents qui expirent -->
+    {% if expiring_documents %}
+    <div class="col-12 mb-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-calendar-x me-2"></i>Documents expirant bientot
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>Dossier</th>
+                                <th>Date d'expiration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in expiring_documents %}
+                            <tr>
+                                <td><i class="bi bi-file-earmark me-2"></i>{{ doc.name }}</td>
+                                <td>{{ doc.folder.name if doc.folder else '-' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if doc.is_expired else 'warning' }}">
+                                        {{ doc.expiry_date.strftime('%d/%m/%Y') }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('document.view', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
+                                        Voir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

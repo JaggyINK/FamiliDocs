@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.name }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('document.list_documents') }}">Documents</a></li>
+        {% if document.folder %}
+        <li class="breadcrumb-item"><a href="{{ url_for('user.view_folder', folder_id=document.folder.id) }}">{{ document.folder.name }}</a></li>
+        {% endif %}
+        <li class="breadcrumb-item active">{{ document.name }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-{{ document.file_type }} me-2"></i>{{ document.name }}
+                </h5>
+                <div>
+                    {% if can_edit %}
+                    <a href="{{ url_for('document.edit', document_id=document.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Modifier
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-download me-1"></i>Telecharger
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if document.description %}
+                <p class="card-text">{{ document.description }}</p>
+                <hr>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th><i class="bi bi-file-earmark me-2"></i>Fichier original</th>
+                                <td>{{ document.original_filename }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-tag me-2"></i>Type</th>
+                                <td><span class="badge bg-secondary">{{ document.file_type }}</span></td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-hdd me-2"></i>Taille</th>
+                                <td>{{ document.get_human_readable_size() }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-folder me-2"></i>Dossier</th>
+                                <td>{{ document.folder.name if document.folder else 'Racine' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th><i class="bi bi-shield me-2"></i>Confidentialite</th>
+                                <td>
+                                    {% if document.confidentiality == 'private' %}
+                                    <span class="badge bg-danger">Prive</span>
+                                    {% elif document.confidentiality == 'restricted' %}
+                                    <span class="badge bg-warning">Restreint</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Public</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-calendar-plus me-2"></i>Ajoute le</th>
+                                <td>{{ document.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-calendar-check me-2"></i>Modifie le</th>
+                                <td>{{ document.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-calendar-x me-2"></i>Echeance</th>
+                                <td>
+                                    {% if document.expiry_date %}
+                                    <span class="badge bg-{{ 'danger' if document.is_expired else ('warning' if document.is_expiring_soon else 'secondary') }}">
+                                        {{ document.expiry_date.strftime('%d/%m/%Y') }}
+                                    </span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>Historique
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                <div class="list-group list-group-flush">
+                    {% for log in logs %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>
+                                <i class="bi bi-{{ 'eye' if log.action == 'document_view' else ('download' if log.action == 'document_download' else 'pencil') }} me-2"></i>
+                                {{ log.action_label }}
+                                <small class="text-muted">par {{ log.user.username }}</small>
+                            </span>
+                            <small class="text-muted">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Aucun historique</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>Actions
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-primary">
+                    <i class="bi bi-download me-2"></i>Telecharger
+                </a>
+                {% if document.owner_id == current_user.id %}
+                <a href="{{ url_for('document.share', document_id=document.id) }}" class="btn btn-outline-info">
+                    <i class="bi bi-share me-2"></i>Partager
+                </a>
+                {% if can_edit %}
+                <a href="{{ url_for('document.edit', document_id=document.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-pencil me-2"></i>Modifier
+                </a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('document.delete', document_id=document.id) }}"
+                      onsubmit="return confirm('Etes-vous sur de vouloir supprimer ce document ?');">
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-trash me-2"></i>Supprimer
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Partages -->
+        {% if permissions and document.owner_id == current_user.id %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Partage avec
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for perm in permissions %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-person me-2"></i>{{ perm.granted_user.full_name }}
+                        </span>
+                        <span class="badge bg-{{ 'success' if perm.is_valid() else 'secondary' }}">
+                            {{ 'Actif' if perm.is_valid() else 'Expire' }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

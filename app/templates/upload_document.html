@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter un document - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-upload me-2"></i>Ajouter un document
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('document.upload') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Fichier <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="file" name="file" required>
+                        <div class="form-text">Types autorises: PDF, Word, Excel, Images (max 16 Mo)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nom du document</label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               placeholder="Laissez vide pour utiliser le nom du fichier">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Description optionnelle..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="folder_id" class="form-label">Dossier</label>
+                            <select class="form-select" id="folder_id" name="folder_id">
+                                <option value="">Aucun (racine)</option>
+                                {% for folder in folders %}
+                                <option value="{{ folder.id }}">{{ folder.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="confidentiality" class="form-label">Confidentialite</label>
+                            <select class="form-select" id="confidentiality" name="confidentiality">
+                                {% for key, label in confidentiality_levels.items() %}
+                                <option value="{{ key }}" {% if key == 'private' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="expiry_date" class="form-label">Date d'echeance (optionnel)</label>
+                        <input type="date" class="form-control" id="expiry_date" name="expiry_date">
+                        <div class="form-text">Une tache de rappel sera creee automatiquement</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('document.list_documents') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-2"></i>Ajouter le document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
