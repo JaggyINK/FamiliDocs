@@ -26,6 +26,9 @@
                         <i class="bi bi-pencil me-1"></i>Modifier
                     </a>
                     {% endif %}
+                    <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-clock-history me-1"></i>Versions
+                    </a>
                     <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-sm btn-primary">
                         <i class="bi bi-download me-1"></i>Telecharger
                     </a>
@@ -136,6 +139,9 @@
                 <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-primary">
                     <i class="bi bi-download me-2"></i>Telecharger
                 </a>
+                <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-outline-info">
+                    <i class="bi bi-clock-history me-2"></i>Historique versions
+                </a>
                 {% if document.owner_id == current_user.id %}
                 <a href="{{ url_for('document.share', document_id=document.id) }}" class="btn btn-outline-info">
                     <i class="bi bi-share me-2"></i>Partager
@@ -156,6 +162,40 @@
         </div>
 
         <!-- Partages -->
+        <!-- Tags -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-tags me-2"></i>Tags
+            </div>
+            <div class="card-body">
+                {% for tag in document.tags %}
+                <span class="badge me-1 mb-1" style="background-color: {{ tag.color }};">
+                    {{ tag.name }}
+                    {% if document.owner_id == current_user.id %}
+                    <form method="POST" action="{{ url_for('search.remove_tag_from_document', document_id=document.id, tag_id=tag.id) }}" class="d-inline">
+                        <button type="submit" class="btn-close btn-close-white ms-1" style="font-size: 0.5rem;" title="Retirer"></button>
+                    </form>
+                    {% endif %}
+                </span>
+                {% endfor %}
+                {% if not document.tags.all() %}
+                <small class="text-muted">Aucun tag</small>
+                {% endif %}
+
+                {% if document.owner_id == current_user.id or current_user.is_admin() %}
+                <hr>
+                <form method="POST" action="{{ url_for('search.add_tag_to_document', document_id=document.id) }}">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" name="new_tag" placeholder="Nouveau tag...">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
         {% if permissions and document.owner_id == current_user.id %}
         <div class="card">
             <div class="card-header">

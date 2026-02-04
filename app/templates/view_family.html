@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}{{ family.name }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('family.list_families') }}">Groupes</a></li>
+        <li class="breadcrumb-item active">{{ family.name }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="bi bi-house-heart me-2"></i>{{ family.name }}</h1>
+        {% if family.description %}
+        <p class="text-muted mb-0">{{ family.description }}</p>
+        {% endif %}
+    </div>
+    <div>
+        {% if family.creator_id != current_user.id %}
+        <form method="POST" action="{{ url_for('family.leave_family', family_id=family.id) }}" class="d-inline"
+              onsubmit="return confirm('Quitter ce groupe ?');">
+            <button type="submit" class="btn btn-outline-warning">
+                <i class="bi bi-box-arrow-left me-2"></i>Quitter
+            </button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('family.delete_family', family_id=family.id) }}" class="d-inline"
+              onsubmit="return confirm('Supprimer ce groupe et tous ses membres ?');">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-2"></i>Supprimer
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Liste des membres -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Membres ({{ members|length }})
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Membre</th>
+                                <th>Role</th>
+                                <th>Rejoint le</th>
+                                {% if can_manage %}<th>Actions</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr>
+                                <td>
+                                    <strong>{{ member.user.full_name }}</strong>
+                                    {% if member.user_id == family.creator_id %}
+                                    <i class="bi bi-star-fill text-warning ms-1" title="Createur"></i>
+                                    {% endif %}
+                                    <br><small class="text-muted">{{ member.user.email }}</small>
+                                </td>
+                                <td>
+                                    {% if can_manage and member.user_id != family.creator_id %}
+                                    <form method="POST" action="{{ url_for('family.change_member_role', family_id=family.id, member_id=member.id) }}"
+                                          class="d-inline">
+                                        <select name="role" class="form-select form-select-sm" style="width:auto;"
+                                                onchange="this.form.submit();">
+                                            {% for role_key, role_label in roles.items() %}
+                                            <option value="{{ role_key }}" {% if member.role == role_key %}selected{% endif %}>
+                                                {{ role_key }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </form>
+                                    {% else %}
+                                    <span class="badge bg-{{ 'danger' if member.role == 'admin' else ('warning' if member.role == 'gestionnaire' else ('info' if member.role == 'editeur' else 'secondary')) }}">
+                                        {{ member.role }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ member.joined_at.strftime('%d/%m/%Y') }}</small></td>
+                                {% if can_manage %}
+                                <td>
+                                    {% if member.user_id != family.creator_id %}
+                                    <form method="POST" action="{{ url_for('family.remove_member', family_id=family.id, member_id=member.id) }}"
+                                          class="d-inline" onsubmit="return confirm('Retirer ce membre ?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        {% if can_manage %}
+        <!-- Generer un lien d'invitation -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-link-45deg me-2"></i>Inviter via lien securise
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('family.create_invite_link', family_id=family.id) }}">
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Role attribue</label>
+                        <select class="form-select" id="role" name="role">
+                            {% for role_key, role_label in roles.items() %}
+                            {% if role_key != 'admin' %}
+                            <option value="{{ role_key }}" {% if role_key == 'lecteur' %}selected{% endif %}>
+                                {{ role_key }} - {{ role_label.split(' - ')[1] if ' - ' in role_label else role_label }}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="expires_hours" class="form-label">Expire dans</label>
+                        <select class="form-select" id="expires_hours" name="expires_hours">
+                            <option value="1">1 heure</option>
+                            <option value="24" selected>24 heures</option>
+                            <option value="72">3 jours</option>
+                            <option value="168">7 jours</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="max_uses" class="form-label">Nombre d'utilisations</label>
+                        <select class="form-select" id="max_uses" name="max_uses">
+                            <option value="1" selected>1 fois</option>
+                            <option value="3">3 fois</option>
+                            <option value="5">5 fois</option>
+                            <option value="10">10 fois</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-link-45deg me-2"></i>Generer le lien
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Liens actifs -->
+        {% if invite_links %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-link me-2"></i>Liens actifs
+            </div>
+            <div class="card-body">
+                {% for link in invite_links %}
+                <div class="mb-3 p-2 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-secondary">{{ link.granted_role }}</span>
+                            <br>
+                            <small class="text-muted">
+                                Expire: {{ link.expires_at.strftime('%d/%m %H:%M') }}<br>
+                                Utilisations: {{ link.use_count }}/{{ link.max_uses }}
+                            </small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    onclick="copyToClipboard('{{ url_for('family.accept_invite', token=link.token, _external=True) }}')"
+                                    title="Copier le lien">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('family.revoke_share_link', link_id=link.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoquer">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="mt-1">
+                        <code class="small user-select-all" style="font-size:0.65rem; word-break:break-all;">
+                            {{ url_for('family.accept_invite', token=link.token, _external=True) }}
+                        </code>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Infos -->
+        <div class="card mt-4">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Informations</div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr><th>Createur</th><td>{{ family.creator.full_name }}</td></tr>
+                    <tr><th>Cree le</th><td>{{ family.created_at.strftime('%d/%m/%Y') }}</td></tr>
+                    <tr><th>Membres</th><td>{{ family.member_count }}</td></tr>
+                    <tr><th>Mon role</th><td><span class="badge bg-primary">{{ family.get_member_role(current_user.id) }}</span></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -164,6 +164,62 @@ Journalise toutes les actions importantes.
 | document_id | INTEGER | FK vers documents |
 | created_at | DATETIME | Date de l'action |
 
+### Table `notifications`
+Gere les notifications temps reel des utilisateurs.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| user_id | INTEGER | FK vers users |
+| type | VARCHAR(50) | Type (11 types disponibles) |
+| title | VARCHAR(200) | Titre |
+| message | TEXT | Contenu |
+| priority | VARCHAR(20) | low/normal/high/urgent |
+| is_read | BOOLEAN | Lu ou non |
+| document_id | INTEGER | FK vers documents (optionnel) |
+| task_id | INTEGER | FK vers tasks (optionnel) |
+| created_at | DATETIME | Date de creation |
+| read_at | DATETIME | Date de lecture |
+| expires_at | DATETIME | Expiration auto |
+
+### Table `document_versions`
+Historique des versions d'un document.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| document_id | INTEGER | FK vers documents |
+| version_number | INTEGER | Numero de version |
+| stored_filename | VARCHAR(255) | Fichier de la version |
+| original_filename | VARCHAR(255) | Nom original |
+| file_size | INTEGER | Taille en octets |
+| file_type | VARCHAR(50) | Type de fichier |
+| comment | TEXT | Commentaire de modification |
+| uploaded_by | INTEGER | FK vers users |
+| created_at | DATETIME | Date de creation |
+
+### Table `tags`
+Etiquettes pour organiser les documents.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| name | VARCHAR(50) | Nom du tag |
+| color | VARCHAR(7) | Couleur hexadecimale |
+| owner_id | INTEGER | FK vers users |
+| created_at | DATETIME | Date de creation |
+
+**Contrainte** : UNIQUE(name, owner_id)
+
+### Table `document_tags`
+Table d'association documents-tags (N:N).
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| document_id | INTEGER | FK vers documents (PK) |
+| tag_id | INTEGER | FK vers tags (PK) |
+| created_at | DATETIME | Date d'association |
+
 ## Relations
 
 1. **Users -> Folders** : Un utilisateur possede plusieurs dossiers (1:N)
@@ -173,6 +229,10 @@ Journalise toutes les actions importantes.
 5. **Documents -> Permissions** : Un document a plusieurs permissions (1:N)
 6. **Documents -> Tasks** : Un document peut avoir plusieurs taches (1:N)
 7. **Users -> Logs** : Les actions d'un utilisateur sont journalisees (1:N)
+8. **Users -> Notifications** : Un utilisateur recoit plusieurs notifications (1:N)
+9. **Documents -> Versions** : Un document a plusieurs versions (1:N)
+10. **Documents <-> Tags** : Relation N:N via document_tags
+11. **Users -> Tags** : Un utilisateur possede plusieurs tags (1:N)
 
 ## Index
 
@@ -180,4 +240,8 @@ Journalise toutes les actions importantes.
 - `users.username` : Index unique pour la recherche par username
 - `documents.stored_filename` : Index unique pour la reference fichier
 - `logs.created_at` : Index pour les requetes temporelles
+- `notifications.created_at` : Index pour le tri chronologique
+- `document_versions.created_at` : Index pour le tri des versions
+- `tags.name` : Index pour la recherche par nom
 - `permissions(document_id, user_id)` : Contrainte d'unicite
+- `tags(name, owner_id)` : Contrainte d'unicite

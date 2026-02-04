@@ -310,11 +310,16 @@ def share(document_id):
     # Permissions existantes
     existing_permissions = PermissionService.get_document_permissions(document_id)
 
+    # Liens de partage actifs
+    from app.models.family import ShareLink
+    share_links = ShareLink.get_active_links_for_document(document_id)
+
     return render_template(
         'share_document.html',
         document=document,
         available_users=available_users,
-        existing_permissions=existing_permissions
+        existing_permissions=existing_permissions,
+        share_links=share_links
     )
 
 

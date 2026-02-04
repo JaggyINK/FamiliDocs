@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Versions - {{ document.name }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('document.list_documents') }}">Documents</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('document.view', document_id=document.id) }}">{{ document.name }}</a></li>
+        <li class="breadcrumb-item active">Historique des versions</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-clock-history me-2"></i>Versions de "{{ document.name }}"</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Liste des versions -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-ol me-2"></i>Historique ({{ versions|length }} version{{ 's' if versions|length > 1 else '' }})
+            </div>
+            <div class="card-body">
+                {% if versions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Version</th>
+                                <th>Fichier</th>
+                                <th>Taille</th>
+                                <th>Par</th>
+                                <th>Date</th>
+                                <th>Commentaire</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in versions %}
+                            <tr class="{{ 'table-primary' if v.stored_filename == document.stored_filename else '' }}">
+                                <td>
+                                    <span class="badge bg-{{ 'primary' if v.stored_filename == document.stored_filename else 'secondary' }}">
+                                        v{{ v.version_number }}
+                                    </span>
+                                    {% if v.stored_filename == document.stored_filename %}
+                                    <small class="text-primary ms-1">(courante)</small>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ v.original_filename }}</small></td>
+                                <td>{{ v.get_human_readable_size() }}</td>
+                                <td>{{ v.uploader.first_name }}</td>
+                                <td><small>{{ v.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
+                                <td><small class="text-muted">{{ v.comment or '-' }}</small></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('version.download_version', document_id=document.id, version_id=v.id) }}"
+                                           class="btn btn-outline-success" title="Telecharger">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        {% if v.stored_filename != document.stored_filename and current_user.can_edit_document(document) %}
+                                        <form method="POST" action="{{ url_for('version.restore_version', document_id=document.id, version_id=v.id) }}"
+                                              class="d-inline" onsubmit="return confirm('Restaurer cette version ?');">
+                                            <button type="submit" class="btn btn-outline-warning" title="Restaurer">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucune version precedente enregistree.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Upload nouvelle version -->
+        {% if current_user.can_edit_document(document) %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-upload me-2"></i>Nouvelle version
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('version.upload_version', document_id=document.id) }}"
+                      enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Fichier</label>
+                        <input type="file" class="form-control" id="file" name="file" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Commentaire</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="2"
+                                  placeholder="Description des modifications..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-upload me-2"></i>Uploader la version
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Infos document -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Document
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Nom</th>
+                        <td>{{ document.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fichier actuel</th>
+                        <td><small>{{ document.original_filename }}</small></td>
+                    </tr>
+                    <tr>
+                        <th>Taille</th>
+                        <td>{{ document.get_human_readable_size() }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nb versions</th>
+                        <td>{{ versions|length }}</td>
+                    </tr>
+                </table>
+                <a href="{{ url_for('document.view', document_id=document.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-arrow-left me-2"></i>Retour au document
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Recherche avancee - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-search me-2"></i>Recherche avancee</h1>
+</div>
+
+<!-- Formulaire de recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('search.advanced_search') }}">
+            <div class="row g-3">
+                <!-- Recherche textuelle -->
+                <div class="col-md-6">
+                    <label for="q" class="form-label">Recherche</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="q" name="q"
+                               value="{{ query }}" placeholder="Nom, description, fichier...">
+                    </div>
+                </div>
+
+                <!-- Type de fichier -->
+                <div class="col-md-3">
+                    <label for="type" class="form-label">Type</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">Tous</option>
+                        <option value="pdf" {% if file_type == 'pdf' %}selected{% endif %}>PDF</option>
+                        <option value="word" {% if file_type == 'word' %}selected{% endif %}>Word</option>
+                        <option value="excel" {% if file_type == 'excel' %}selected{% endif %}>Excel</option>
+                        <option value="image" {% if file_type == 'image' %}selected{% endif %}>Image</option>
+                        <option value="text" {% if file_type == 'text' %}selected{% endif %}>Texte</option>
+                    </select>
+                </div>
+
+                <!-- Dossier -->
+                <div class="col-md-3">
+                    <label for="folder" class="form-label">Dossier</label>
+                    <select class="form-select" id="folder" name="folder">
+                        <option value="">Tous</option>
+                        <option value="-1" {% if selected_folder == -1 %}selected{% endif %}>Sans dossier</option>
+                        {% for folder in folders %}
+                        <option value="{{ folder.id }}" {% if folder.id == selected_folder %}selected{% endif %}>
+                            {{ folder.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Confidentialite -->
+                <div class="col-md-3">
+                    <label for="confidentiality" class="form-label">Confidentialite</label>
+                    <select class="form-select" id="confidentiality" name="confidentiality">
+                        <option value="">Toutes</option>
+                        <option value="public" {% if confidentiality == 'public' %}selected{% endif %}>Public</option>
+                        <option value="private" {% if confidentiality == 'private' %}selected{% endif %}>Prive</option>
+                        <option value="restricted" {% if confidentiality == 'restricted' %}selected{% endif %}>Restreint</option>
+                    </select>
+                </div>
+
+                <!-- Date de -->
+                <div class="col-md-3">
+                    <label for="date_from" class="form-label">Date du</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                </div>
+
+                <!-- Date a -->
+                <div class="col-md-3">
+                    <label for="date_to" class="form-label">Au</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                </div>
+
+                <!-- Tags -->
+                <div class="col-md-3">
+                    <label class="form-label">Tags</label>
+                    <div style="max-height: 80px; overflow-y: auto;">
+                        {% for tag in tags %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="tags"
+                                   value="{{ tag.id }}" id="tag_{{ tag.id }}"
+                                   {% if tag.id in selected_tags %}checked{% endif %}>
+                            <label class="form-check-label" for="tag_{{ tag.id }}">
+                                <span class="badge" style="background-color: {{ tag.color }};">{{ tag.name }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% if not tags %}
+                        <small class="text-muted">Aucun tag</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <label for="sort" class="form-label">Trier par</label>
+                    <select class="form-select" id="sort" name="sort">
+                        <option value="updated_at" {% if sort_by == 'updated_at' %}selected{% endif %}>Date modification</option>
+                        <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Date creation</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Nom</option>
+                        <option value="file_size" {% if sort_by == 'file_size' %}selected{% endif %}>Taille</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="order" class="form-label">Ordre</label>
+                    <select class="form-select" id="order" name="order">
+                        <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descendant</option>
+                        <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascendant</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Rechercher
+                    </button>
+                    <a href="{{ url_for('search.advanced_search') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Reinitialiser
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resultats -->
+{% if has_searched %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list me-2"></i>Resultats</span>
+        <span class="badge bg-primary">{{ result_count }} document{{ 's' if result_count > 1 else '' }}</span>
+    </div>
+    <div class="card-body">
+        {% if documents %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Dossier</th>
+                        <th>Tags</th>
+                        <th>Taille</th>
+                        <th>Modifie le</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('document.view', document_id=doc.id) }}" class="text-decoration-none">
+                                <i class="bi bi-file-earmark-{{ doc.file_type }} me-2"></i>{{ doc.name }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ doc.file_type }}</span></td>
+                        <td>{{ doc.folder.name if doc.folder else '-' }}</td>
+                        <td>
+                            {% for tag in doc.tags %}
+                            <span class="badge" style="background-color: {{ tag.color }}; font-size: 0.7rem;">{{ tag.name }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>{{ doc.get_human_readable_size() }}</td>
+                        <td><small>{{ doc.updated_at.strftime('%d/%m/%Y') }}</small></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('document.view', document_id=doc.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('document.download', document_id=doc.id) }}" class="btn btn-outline-success">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+            <h5 class="mt-3">Aucun resultat</h5>
+            <p class="text-muted">Essayez de modifier vos criteres de recherche</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

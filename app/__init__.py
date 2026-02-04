@@ -39,6 +39,12 @@ def create_app(config_name=None):
     # Configuration du user_loader
     _setup_login_manager(app)
 
+    # En-tetes de securite HTTP
+    _setup_security_headers(app)
+
+    # Injection du compteur de notifications dans les templates
+    _setup_context_processors(app)
+
     # Création des tables de la base de données
     with app.app_context():
         db.create_all()
@@ -66,6 +72,9 @@ def _register_blueprints(app):
     from app.routes.task_routes import task_bp
     from app.routes.admin_routes import admin_bp
     from app.routes.notification_routes import notification_bp
+    from app.routes.version_routes import version_bp
+    from app.routes.search_routes import search_bp
+    from app.routes.family_routes import family_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
@@ -73,6 +82,9 @@ def _register_blueprints(app):
     app.register_blueprint(task_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(notification_bp)
+    app.register_blueprint(version_bp)
+    app.register_blueprint(search_bp)
+    app.register_blueprint(family_bp)
 
 
 def _setup_login_manager(app):
@@ -82,6 +94,33 @@ def _setup_login_manager(app):
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+
+def _setup_security_headers(app):
+    """Configure les en-tetes de securite HTTP"""
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        return response
+
+
+def _setup_context_processors(app):
+    """Configure les variables injectees dans tous les templates"""
+
+    @app.context_processor
+    def inject_notification_count():
+        from flask_login import current_user
+        if current_user.is_authenticated:
+            from app.models.notification import Notification
+            count = Notification.get_unread_count(current_user.id)
+            return {'notification_count': count}
+        return {'notification_count': 0}
 
 
 def _create_admin_user(app):

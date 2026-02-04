@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Creer un groupe - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('family.list_families') }}">Groupes</a></li>
+        <li class="breadcrumb-item active">Nouveau groupe</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people-fill me-2"></i>Creer un groupe familial
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('family.create_family') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nom du groupe <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               maxlength="100" placeholder="Ex: Famille Dupont">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="A quoi sert ce groupe..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Vous serez automatiquement administrateur du groupe. Vous pourrez ensuite inviter
+                        des membres via des liens securises a usage unique.
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-people-fill me-2"></i>Creer le groupe
+                        </button>
+                        <a href="{{ url_for('family.list_families') }}" class="btn btn-outline-secondary">
+                            Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

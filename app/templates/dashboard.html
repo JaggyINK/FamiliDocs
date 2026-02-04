@@ -164,6 +164,98 @@
         </div>
     </div>
 
+    <!-- Statistiques detaillees -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-pie-chart me-2"></i>Repartition par type
+            </div>
+            <div class="card-body">
+                {% if detailed_stats.docs_by_type %}
+                {% for type, count in detailed_stats.docs_by_type.items() %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>
+                        <i class="bi bi-file-earmark-{{ type }} me-2"></i>{{ type|upper }}
+                    </span>
+                    <div class="d-flex align-items-center">
+                        <div class="progress me-2" style="width: 100px; height: 8px;">
+                            <div class="progress-bar" style="width: {{ (count / detailed_stats.total_documents * 100) if detailed_stats.total_documents > 0 else 0 }}%;"></div>
+                        </div>
+                        <span class="badge bg-secondary">{{ count }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucune donnee</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-bar-chart me-2"></i>Indicateurs
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <h4 class="text-primary mb-0">{{ detailed_stats.total_size_formatted }}</h4>
+                        <small class="text-muted">Espace utilise</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h4 class="text-success mb-0">{{ detailed_stats.total_tasks }}</h4>
+                        <small class="text-muted">Total taches</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h4 class="text-danger mb-0">{{ detailed_stats.overdue_tasks }}</h4>
+                        <small class="text-muted">Taches en retard</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h4 class="text-warning mb-0">{{ detailed_stats.expiring_soon }}</h4>
+                        <small class="text-muted">Documents a renouveler</small>
+                    </div>
+                </div>
+
+                {% if detailed_stats.tasks_by_status %}
+                <hr>
+                <h6 class="mb-2">Taches par statut</h6>
+                {% for status, count in detailed_stats.tasks_by_status.items() %}
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small>{{ status }}</small>
+                    <span class="badge bg-{{ 'secondary' if status == 'pending' else ('info' if status == 'in_progress' else ('success' if status == 'completed' else 'dark')) }}">
+                        {{ count }}
+                    </span>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Activite recente par mois -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-graph-up me-2"></i>Activite des 6 derniers mois
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-end justify-content-around" style="height: 120px;">
+                    {% for month_data in detailed_stats.docs_by_month %}
+                    <div class="text-center" style="flex: 1;">
+                        <div class="bg-primary rounded-top mx-1"
+                             style="height: {{ [month_data.count * 20, 5]|max }}px; min-height: 5px; max-height: 100px;"
+                             title="{{ month_data.count }} documents">
+                        </div>
+                        <small class="text-muted d-block mt-1">{{ month_data.month }}</small>
+                        <small class="fw-bold">{{ month_data.count }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Documents qui expirent -->
     {% if expiring_documents %}
     <div class="col-12 mb-4">
