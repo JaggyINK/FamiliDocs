@@ -66,6 +66,31 @@
 - [x] Suivi des statuts
 - [x] Rappels d'echeances
 
+### Notifications (v2.0)
+- [x] Notifications temps reel (AJAX)
+- [x] 11 types de notifications
+- [x] Priorites avec code couleur
+- [x] Rafraichissement automatique
+- [x] Support email (simule)
+
+### Versioning documents (v2.0)
+- [x] Historique complet des versions
+- [x] Upload de nouvelles versions
+- [x] Restauration d'anciennes versions
+- [x] Telechargement par version
+
+### Tags et recherche avancee (v2.0)
+- [x] Tags personnalises avec couleur
+- [x] Association N:N documents-tags
+- [x] Recherche multi-criteres
+- [x] Recherche globale AJAX
+
+### Dashboard ameliore (v2.0)
+- [x] Statistiques par type de fichier
+- [x] Indicateurs cles (espace, retards)
+- [x] Graphique d'activite mensuel
+- [x] Alertes visuelles
+
 ### Administration
 - [x] Tableau de bord statistiques
 - [x] Gestion des utilisateurs
@@ -78,6 +103,9 @@
 - [x] Sessions securisees
 - [x] Validation des entrees
 - [x] Journalisation des actions
+- [x] Limitation de tentatives de connexion (v2.0)
+- [x] En-tetes HTTP de securite (v2.0)
+- [x] Politique de mot de passe stricte (v2.0)
 
 ## Technologies Utilisees
 
@@ -107,12 +135,14 @@
 
 ## Points Forts du Projet
 
-1. **Architecture propre** : Separation claire des responsabilites (MVC)
-2. **Securite** : Hashage, chiffrement, CSRF, sessions
-3. **Extensibilite** : Code modulaire et documente
-4. **Interface intuitive** : Design Bootstrap responsive
-5. **Tests** : Couverture des fonctionnalites principales
-6. **Documentation** : Complete et a jour
+1. **Architecture solide** : 9 modeles, 7 services, 8 blueprints (MVC)
+2. **Securite multi-couches** : bcrypt, CSRF, rate limiting, headers HTTP
+3. **Versioning documents** : Tracabilite complete des modifications
+4. **Tags et recherche avancee** : Organisation flexible multi-criteres
+5. **Notifications temps reel** : AJAX, 11 types, rafraichissement auto
+6. **Dashboard statistiques** : Graphiques, indicateurs, alertes
+7. **41+ tests unitaires** : Modeles, services, securite
+8. **Documentation technique** : Complete et detaillee
 
 ## Axes d'Amelioration
 
@@ -120,7 +150,7 @@
 2. Integration cloud (AWS/GCP)
 3. Signature electronique
 4. Reconnaissance optique de caracteres (OCR)
-5. Notifications par email/SMS
+5. Notifications par email reel (SMTP)
 
 ## Contexte BTS SIO SLAM
 

@@ -7,3 +7,4 @@ from .permission_service import PermissionService
 from .encryption_service import EncryptionService
 from .backup_service import BackupService
 from .notification_service import NotificationService
+from .search_service import SearchService

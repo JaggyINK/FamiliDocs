@@ -10,6 +10,7 @@ from app.models.folder import Folder
 from app.models.task import Task
 from app.models.log import Log
 from app.services.document_service import DocumentService
+from app.services.search_service import SearchService
 
 user_bp = Blueprint('user', __name__)
 
@@ -44,9 +45,13 @@ def dashboard():
     # Documents qui expirent bientôt
     expiring_documents = DocumentService.get_expiring_documents(current_user.id, days=30)
 
+    # Statistiques detaillees
+    detailed_stats = SearchService.get_statistics(current_user.id)
+
     return render_template(
         'dashboard.html',
         stats=stats,
+        detailed_stats=detailed_stats,
         recent_documents=recent_documents,
         upcoming_tasks=upcoming_tasks,
         overdue_tasks=overdue_tasks,

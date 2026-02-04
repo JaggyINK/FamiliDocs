@@ -1,6 +1,3 @@
-"""
-Service de gestion des documents
-"""
 import os
 import uuid
 from datetime import datetime
@@ -15,27 +12,24 @@ from app.models.task import Task
 
 
 class DocumentService:
-    """Service pour la gestion des documents"""
-
+    """gest doc"""
     @staticmethod
     def allowed_file(filename: str) -> bool:
-        """Vérifie si l'extension du fichier est autorisée"""
+        """check extension fichier si autorisé"""
         if '.' not in filename:
             return False
         ext = filename.rsplit('.', 1)[1].lower()
         return ext in current_app.config.get('ALLOWED_EXTENSIONS', set())
-
     @staticmethod
     def generate_stored_filename(original_filename: str) -> str:
-        """Génère un nom de fichier unique pour le stockage"""
+        """nom fichier unique pr archive bdd"""
         ext = ''
         if '.' in original_filename:
             ext = '.' + original_filename.rsplit('.', 1)[1].lower()
         return f"{uuid.uuid4().hex}{ext}"
-
     @staticmethod
     def get_file_type(filename: str) -> str:
-        """Détermine le type de fichier à partir de l'extension"""
+        """type de fichier : extension"""
         if '.' not in filename:
             return 'other'
 
@@ -53,11 +47,8 @@ class DocumentService:
     def upload_document(file, name: str, owner_id: int, folder_id: int = None,
                         description: str = None, confidentiality: str = 'private',
                         expiry_date=None, user=None) -> tuple:
-        """
-        Upload un document
-        Retourne (success, document_or_error_message)
-        """
-        # Vérification du fichier
+        """ Upload doc : msg (success, document_or_error_message)"""
+        # Vérif fichier
         if not file or file.filename == '':
             return False, "Aucun fichier sélectionné"
 
@@ -66,7 +57,7 @@ class DocumentService:
         if not DocumentService.allowed_file(original_filename):
             return False, "Type de fichier non autorisé"
 
-        # Génération du nom de stockage
+        # Gen nom stockage
         stored_filename = DocumentService.generate_stored_filename(original_filename)
 
         # Chemin de sauvegarde
@@ -74,11 +65,11 @@ class DocumentService:
         file_path = os.path.join(upload_folder, stored_filename)
 
         try:
-            # Sauvegarde du fichier
+            # Sauvegarde
             file.save(file_path)
             file_size = os.path.getsize(file_path)
 
-            # Création du document en base
+            # Creation document en base
             document = Document(
                 name=name,
                 original_filename=original_filename,
@@ -95,7 +86,7 @@ class DocumentService:
             db.session.add(document)
             db.session.commit()
 
-            # Log de l'action
+            # Log action
             if user:
                 Log.create_log(
                     user_id=user.id,
@@ -105,7 +96,7 @@ class DocumentService:
                 )
                 db.session.commit()
 
-            # Création d'une tâche si date d'échéance
+            # Création tâche si date echéance
             if expiry_date:
                 task = Task.create_from_document(document)
                 db.session.add(task)
@@ -114,7 +105,7 @@ class DocumentService:
             return True, document
 
         except Exception as e:
-            # Nettoyage en cas d'erreur
+            # Nettoyage si erreur
             if os.path.exists(file_path):
                 os.remove(file_path)
             db.session.rollback()
@@ -122,18 +113,16 @@ class DocumentService:
 
     @staticmethod
     def get_document_path(document: Document) -> str:
-        """Retourne le chemin complet du fichier"""
+        """chemin complet du fichier"""
         upload_folder = current_app.config.get('UPLOAD_FOLDER')
         return os.path.join(upload_folder, document.stored_filename)
 
     @staticmethod
     def delete_document(document: Document, user=None) -> tuple:
-        """
-        Supprime un document
-        Retourne (success, message)
+        """ Supprime un document : msg (success / error )
         """
         try:
-            # Suppression du fichier physique
+            # Suppression fichier
             file_path = DocumentService.get_document_path(document)
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -145,7 +134,7 @@ class DocumentService:
             db.session.delete(document)
             db.session.commit()
 
-            # Log de l'action
+            # Log action
             if user:
                 Log.create_log(
                     user_id=user.id,
@@ -164,10 +153,7 @@ class DocumentService:
     def update_document(document: Document, name: str = None,
                         description: str = None, confidentiality: str = None,
                         folder_id: int = None, expiry_date=None, user=None) -> tuple:
-        """
-        Met à jour un document
-        Retourne (success, message)
-        """
+        """ Met à jour un document : Retourne (success, message) """
         try:
             changes = []
 
@@ -195,7 +181,7 @@ class DocumentService:
                 document.updated_at = datetime.utcnow()
                 db.session.commit()
 
-                # Log de l'action
+                # Log action
                 if user:
                     Log.create_log(
                         user_id=user.id,
@@ -214,7 +200,7 @@ class DocumentService:
     @staticmethod
     def get_user_documents(user_id: int, folder_id: int = None,
                            search: str = None, file_type: str = None):
-        """Récupère les documents d'un utilisateur avec filtres"""
+        """Récupère documents filtres"""
         query = Document.query.filter_by(owner_id=user_id)
 
         if folder_id:

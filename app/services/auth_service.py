@@ -1,6 +1,4 @@
-"""
-Service d'authentification - Gestion des connexions et mots de passe
-"""
+""" Service d'authentification - Gestion des connexions et mots de passe """
 import bcrypt
 from datetime import datetime
 from flask import request
@@ -13,48 +11,94 @@ from app.models.folder import Folder
 
 
 class AuthService:
-    """Service pour la gestion de l'authentification"""
+    """authentification"""
+    # Limite de connexion
+    MAX_LOGIN_ATTEMPTS = 5
+    LOCKOUT_DURATION = 900  # 15 minutes en secondes
+    _failed_attempts = {}  # {ip: {'count': int, 'last_attempt': datetime}}
+
+    @classmethod
+    def _check_rate_limit(cls, ip_address):
+        """Verifie si l'IP n'a pas depasse le nombre max de tentatives"""
+        if ip_address not in cls._failed_attempts:
+            return True, None
+
+        attempt_data = cls._failed_attempts[ip_address]
+        elapsed = (datetime.utcnow() - attempt_data['last_attempt']).total_seconds()
+
+        # Reinitialiser apres la periode de blocage
+        if elapsed > cls.LOCKOUT_DURATION:
+            del cls._failed_attempts[ip_address]
+            return True, None
+
+        if attempt_data['count'] >= cls.MAX_LOGIN_ATTEMPTS:
+            remaining = int(cls.LOCKOUT_DURATION - elapsed)
+            minutes = remaining // 60
+            return False, f"Trop de tentatives. Reessayez dans {minutes + 1} minute(s)."
+
+        return True, None
+
+    @classmethod
+    def _record_failed_attempt(cls, ip_address):
+        """Enregistre une tentative echouee"""
+        if ip_address not in cls._failed_attempts:
+            cls._failed_attempts[ip_address] = {'count': 0, 'last_attempt': datetime.utcnow()}
+
+        cls._failed_attempts[ip_address]['count'] += 1
+        cls._failed_attempts[ip_address]['last_attempt'] = datetime.utcnow()
+
+    @classmethod
+    def _clear_failed_attempts(cls, ip_address):
+        """Reinitialise les tentatives pour une IP apres connexion reussie"""
+        if ip_address in cls._failed_attempts:
+            del cls._failed_attempts[ip_address]
 
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash un mot de passe avec bcrypt"""
+        """Hash pass bcrypt"""
         salt = bcrypt.gensalt()
         return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
     @staticmethod
     def verify_password(password: str, password_hash: str) -> bool:
-        """Vérifie un mot de passe contre son hash"""
+        """check pas hash"""
         return bcrypt.checkpw(
             password.encode('utf-8'),
             password_hash.encode('utf-8')
         )
 
-    @staticmethod
-    def authenticate(email: str, password: str) -> tuple:
-        """
-        Authentifie un utilisateur
-        Retourne (success, user_or_error_message)
-        """
+    @classmethod
+    def authenticate(cls, email: str, password: str) -> tuple:
+        """ Authentifie un utilisateur avec limitation de tentatives. Retourne (success, user_or_error_message) """
+        ip_address = request.remote_addr
+        # Verifier la limitation de tentatives
+        allowed, error_msg = cls._check_rate_limit(ip_address)
+        if not allowed:
+            return False, error_msg
         user = User.query.filter_by(email=email).first()
-
         if not user:
+            cls._record_failed_attempt(ip_address)
             return False, "Email ou mot de passe incorrect"
-
         if not user.is_active:
-            return False, "Ce compte est désactivé"
-
+            return False, "Ce compte est desactive"
         if not AuthService.verify_password(password, user.password_hash):
-            # Log de l'échec de connexion
+            cls._record_failed_attempt(ip_address)
+            # Log connexion
             Log.create_log(
                 user_id=user.id,
                 action='login_failed',
-                details=f"Tentative de connexion échouée pour {email}",
-                ip_address=request.remote_addr,
+                details=f"Tentative de connexion echouee ({cls._failed_attempts.get(ip_address, {}).get('count', 0)}/{cls.MAX_LOGIN_ATTEMPTS})",
+                ip_address=ip_address,
                 user_agent=request.user_agent.string[:255] if request.user_agent.string else None
             )
             db.session.commit()
-            return False, "Email ou mot de passe incorrect"
-
+            remaining = cls.MAX_LOGIN_ATTEMPTS - cls._failed_attempts.get(ip_address, {}).get('count', 0)
+            if remaining > 0:
+                return False, f"Email ou mot de passe incorrect ({remaining} tentative(s) restante(s))"
+            else:
+                return False, f"Compte bloque temporairement. Reessayez dans 15 minutes."
+        # Connexion reussie - reinitialiser les tentatives
+        cls._clear_failed_attempts(ip_address)
         return True, user
 
     @staticmethod
