@@ -247,14 +247,3 @@ def cleanup_notifications():
 
     flash(f"Nettoyage effectue: {result['expired_deleted']} expirees, {result['old_deleted']} anciennes.", 'success')
     return redirect(url_for('admin.dashboard'))
-
-
-# Context processor pour le nombre de notifications (disponible dans tous les templates)
-@notification_bp.app_context_processor
-def inject_notification_count():
-    """Injecte le compteur de notifications dans tous les templates"""
-    if current_user.is_authenticated:
-        return {
-            'notification_count': Notification.get_unread_count(current_user.id)
-        }
-    return {'notification_count': 0}

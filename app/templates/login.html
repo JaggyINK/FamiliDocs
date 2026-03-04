@@ -3,59 +3,42 @@
 {% block title %}Connexion - FamiliDocs{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow">
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <i class="bi bi-folder-fill text-primary" style="font-size: 3rem;"></i>
-                    <h2 class="mt-2">FamiliDocs</h2>
-                    <p class="text-muted">Connexion a votre compte</p>
-                </div>
+{% if pending_invite %}
+<div class="alert alert-success mb-3" style="max-width: 420px;">
+    <strong>Invitation en attente</strong><br>
+    Connectez-vous pour rejoindre <strong>{{ pending_invite.family_name }}</strong>
+    en tant que <span class="badge bg-secondary">{{ pending_invite.role }}</span>
+</div>
+{% endif %}
 
-                <form method="POST" action="{{ url_for('auth.login') }}">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" class="form-control" id="email" name="email"
-                                   placeholder="votre@email.com" required>
-                        </div>
-                    </div>
+<div class="auth-card login">
+    <h1 class="auth-title">FamiliDocs</h1>
+    <p class="auth-subtitle">Connexion a votre compte</p>
 
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control" id="password" name="password"
-                                   placeholder="Votre mot de passe" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                        <label class="form-check-label" for="remember">Se souvenir de moi</label>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
-                    </button>
-                </form>
-
-                <hr class="my-4">
-
-                <div class="text-center">
-                    <p class="mb-0">Pas encore de compte ?</p>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary mt-2">
-                        <i class="bi bi-person-plus me-2"></i>Creer un compte
-                    </a>
-                </div>
-            </div>
+    <form method="POST" action="{{ url_for('auth.login') }}">
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email"
+                   placeholder="votre@email.com" required autofocus>
         </div>
 
-        <div class="text-center mt-4 text-muted">
-            <small>Projet BTS SIO SLAM - FamiliDocs</small>
+        <div class="mb-3">
+            <label for="password" class="form-label">Mot de passe</label>
+            <input type="password" class="form-control" id="password" name="password"
+                   placeholder="Votre mot de passe" required>
         </div>
+
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+            <label class="form-check-label" for="remember">Se souvenir de moi</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+    </form>
+
+    <div class="auth-footer">
+        <p>Pas encore de compte ?</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">Creer un compte</a>
     </div>
 </div>
 {% endblock %}

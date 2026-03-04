@@ -155,10 +155,25 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
 
     if request.method == 'POST':
-        user.email = request.form.get('email', '').strip()
+        new_email = request.form.get('email', '').strip()
+        new_role = request.form.get('role', 'user')
+
+        # Validation du role
+        if new_role not in Config.USER_ROLES:
+            flash('Role invalide.', 'danger')
+            return redirect(url_for('admin.edit_user', user_id=user_id))
+
+        # Verification unicite email
+        if new_email != user.email:
+            existing = User.query.filter(User.email == new_email, User.id != user_id).first()
+            if existing:
+                flash('Cet email est deja utilise par un autre utilisateur.', 'danger')
+                return redirect(url_for('admin.edit_user', user_id=user_id))
+
+        user.email = new_email
         user.first_name = request.form.get('first_name', '').strip()
         user.last_name = request.form.get('last_name', '').strip()
-        user.role = request.form.get('role', 'user')
+        user.role = new_role
         user.is_active = request.form.get('is_active') == 'on'
 
         db.session.commit()
@@ -328,3 +343,4 @@ def delete_backup():
         flash(message, 'danger')
 
     return redirect(url_for('admin.backups'))
+

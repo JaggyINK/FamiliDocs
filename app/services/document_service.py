@@ -57,6 +57,18 @@ class DocumentService:
         if not DocumentService.allowed_file(original_filename):
             return False, "Type de fichier non autorisé"
 
+        # Validation du content-type
+        allowed_mimes = {
+            'application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'image/jpeg', 'image/png', 'image/gif',
+            'text/plain', 'application/octet-stream'
+        }
+        if file.content_type and file.content_type not in allowed_mimes:
+            return False, "Type de contenu non autorisé"
+
         # Gen nom stockage
         stored_filename = DocumentService.generate_stored_filename(original_filename)
 
@@ -86,13 +98,27 @@ class DocumentService:
             db.session.add(document)
             db.session.commit()
 
+            # T8 - Chiffrement AES si confidentialite 'private'
+            if confidentiality == 'private':
+                try:
+                    from app.services.encryption_service import EncryptionService
+                    enc_success, enc_result = EncryptionService.encrypt_file(file_path)
+                    if enc_success:
+                        document.stored_filename = os.path.basename(enc_result)
+                        document.is_encrypted = True
+                        db.session.commit()
+                    else:
+                        current_app.logger.warning(f"Echec chiffrement document {document.id}: {enc_result}")
+                except Exception as e:
+                    current_app.logger.warning(f"Erreur chiffrement document {document.id}: {e}")
+
             # Log action
             if user:
                 Log.create_log(
                     user_id=user.id,
                     action='document_upload',
                     document_id=document.id,
-                    details=f"Document '{name}' uploadé"
+                    details=f"Document '{name}' uploade" + (" (chiffre)" if document.is_encrypted else "")
                 )
                 db.session.commit()
 
@@ -152,7 +178,8 @@ class DocumentService:
     @staticmethod
     def update_document(document: Document, name: str = None,
                         description: str = None, confidentiality: str = None,
-                        folder_id: int = None, expiry_date=None, user=None) -> tuple:
+                        folder_id: int = None, expiry_date=None, next_review_date=None,
+                        user=None) -> tuple:
         """ Met à jour un document : Retourne (success, message) """
         try:
             changes = []
@@ -177,6 +204,11 @@ class DocumentService:
                 document.expiry_date = expiry_date
                 changes.append(f"échéance: {expiry_date}")
 
+            # N2 - Date de revision
+            if next_review_date != document.next_review_date:
+                document.next_review_date = next_review_date
+                changes.append(f"prochaine révision: {next_review_date}")
+
             if changes:
                 document.updated_at = datetime.utcnow()
                 db.session.commit()
@@ -198,9 +230,9 @@ class DocumentService:
             return False, f"Erreur lors de la mise à jour: {str(e)}"
 
     @staticmethod
-    def get_user_documents(user_id: int, folder_id: int = None,
-                           search: str = None, file_type: str = None):
-        """Récupère documents filtres"""
+    def get_user_documents_query(user_id: int, folder_id: int = None,
+                                 search: str = None, file_type: str = None):
+        """Retourne la query filtree (pour pagination)"""
         query = Document.query.filter_by(owner_id=user_id)
 
         if folder_id:
@@ -218,7 +250,15 @@ class DocumentService:
         if file_type:
             query = query.filter_by(file_type=file_type)
 
-        return query.order_by(Document.updated_at.desc()).all()
+        return query.order_by(Document.updated_at.desc())
+
+    @staticmethod
+    def get_user_documents(user_id: int, folder_id: int = None,
+                           search: str = None, file_type: str = None):
+        """Récupère documents filtres"""
+        return DocumentService.get_user_documents_query(
+            user_id, folder_id, search, file_type
+        ).all()
 
     @staticmethod
     def get_shared_documents(user_id: int):

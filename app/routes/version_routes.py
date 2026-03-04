@@ -86,6 +86,19 @@ def upload_version(document_id):
         file.save(file_path)
         file_size = os.path.getsize(file_path)
 
+        # Chiffrer la nouvelle version si le document parent est chiffre
+        if document.is_encrypted:
+            try:
+                from app.services.encryption_service import EncryptionService
+                enc_success, enc_result = EncryptionService.encrypt_file(file_path)
+                if enc_success:
+                    stored_filename = os.path.basename(enc_result)
+                    file_size = os.path.getsize(enc_result)
+                else:
+                    current_app.logger.warning(f"Echec chiffrement version: {enc_result}")
+            except Exception as e:
+                current_app.logger.warning(f"Erreur chiffrement version: {e}")
+
         # Creer l'entree de version
         new_version = DocumentVersion(
             document_id=document_id,

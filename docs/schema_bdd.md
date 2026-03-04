@@ -1,4 +1,4 @@
-# Schema de Base de Donnees - FamiliDocs
+# Schema de Base de Donnees - FamiliDocs v2.1
 
 ## Modele Conceptuel de Donnees (MCD)
 
@@ -14,7 +14,9 @@
 │ last_name       │       │ parent_id (FK)  │──┐
 │ role            │       │ created_at      │  │
 │ is_active       │       │ updated_at      │<─┘
-│ created_at      │       └─────────────────┘
+│ profile_photo   │       └─────────────────┘
+│ family_title    │              │
+│ created_at      │              │
 │ updated_at      │              │
 │ last_login      │              │
 └─────────────────┘              │
@@ -34,6 +36,8 @@
               │ confidentiality │
               │ is_encrypted    │
               │ expiry_date     │
+              │ next_review_date│
+              │ last_reviewed_at│
               │ created_at      │
               │ updated_at      │
               └─────────────────┘
@@ -47,17 +51,41 @@
 │ id (PK)     │ │ id (PK) │ │ id (PK) │
 │ document_id │ │ owner_id│ │ user_id │
 │ user_id     │ │ doc_id  │ │ doc_id  │
-│ granted_by  │ │ title   │ │ action  │
-│ can_view    │ │ desc    │ │ details │
-│ can_edit    │ │ due_date│ │ ip_addr │
-│ can_download│ │ priority│ │ user_ag │
-│ can_share   │ │ status  │ │created_at│
-│ start_date  │ │reminder │ └─────────┘
-│ end_date    │ │created_at│
-│ created_at  │ │updated_at│
-│ updated_at  │ │completed │
-│ notes       │ └─────────┘
-└─────────────┘
+│ granted_by  │ │ assigned│ │ action  │
+│ can_view    │ │ title   │ │ details │
+│ can_edit    │ │ desc    │ │ ip_addr │
+│ can_download│ │ due_date│ │ user_ag │
+│ can_share   │ │ priority│ │created_at│
+│ start_date  │ │ status  │ └─────────┘
+│ end_date    │ │reminder │
+│ created_at  │ │created_at│
+│ updated_at  │ │updated_at│
+│ notes       │ │completed │
+└─────────────┘ └─────────┘
+
+
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│    FAMILIES     │    │ FAMILY_MEMBERS  │    │  SHARE_LINKS    │
+├─────────────────┤    ├─────────────────┤    ├─────────────────┤
+│ id (PK)         │<───│ family_id (FK)  │    │ id (PK)         │
+│ name            │    │ user_id (FK)    │    │ token (UNIQUE)  │
+│ description     │    │ role            │    │ document_id (FK)│
+│ creator_id (FK) │    │ joined_at       │    │ family_id (FK)  │
+│ created_at      │    │ invited_by (FK) │    │ created_by (FK) │
+└─────────────────┘    └─────────────────┘    │ expires_at      │
+        │                                      │ max_uses        │
+        │              ┌─────────────────┐    │ use_count       │
+        └─────────────>│   MESSAGES      │    │ is_revoked      │
+                       ├─────────────────┤    │ granted_role    │
+                       │ id (PK)         │    │ created_at      │
+                       │ family_id (FK)  │    └─────────────────┘
+                       │ sender_id (FK)  │
+                       │ content         │
+                       │ is_announcement │
+                       │ is_deleted      │
+                       │ created_at      │
+                       │ updated_at      │
+                       └─────────────────┘
 ```
 
 ## Description des Tables
@@ -75,6 +103,8 @@ Stocke les informations des utilisateurs de l'application.
 | last_name | VARCHAR(80) | Nom |
 | role | VARCHAR(20) | Role (admin/user/trusted) |
 | is_active | BOOLEAN | Compte actif |
+| profile_photo | VARCHAR(255) | Chemin vers photo de profil |
+| family_title | VARCHAR(50) | Titre familial (Papa, Maman, etc.) |
 | created_at | DATETIME | Date de creation |
 | updated_at | DATETIME | Date de modification |
 | last_login | DATETIME | Derniere connexion |
@@ -108,6 +138,8 @@ Stocke les metadonnees des documents uploades.
 | confidentiality | VARCHAR(20) | Niveau de confidentialite |
 | is_encrypted | BOOLEAN | Document chiffre |
 | expiry_date | DATE | Date d'echeance |
+| next_review_date | DATE | Date prochaine revision |
+| last_reviewed_at | DATETIME | Derniere revision |
 | owner_id | INTEGER | FK vers users |
 | folder_id | INTEGER | FK vers folders |
 | created_at | DATETIME | Date de creation |
@@ -146,6 +178,7 @@ Gere les taches et echeances liees aux documents.
 | reminder_days | INTEGER | Jours avant rappel |
 | owner_id | INTEGER | FK vers users |
 | document_id | INTEGER | FK vers documents |
+| assigned_to_id | INTEGER | FK vers users (membre famille assigne) |
 | created_at | DATETIME | Date de creation |
 | updated_at | DATETIME | Date de modification |
 | completed_at | DATETIME | Date de completion |
@@ -220,6 +253,74 @@ Table d'association documents-tags (N:N).
 | tag_id | INTEGER | FK vers tags (PK) |
 | created_at | DATETIME | Date d'association |
 
+### Table `families`
+Groupes familiaux pour le partage collaboratif.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| name | VARCHAR(100) | Nom de la famille |
+| description | TEXT | Description |
+| creator_id | INTEGER | FK vers users (createur) |
+| created_at | DATETIME | Date de creation |
+
+### Table `family_members`
+Association utilisateur-famille avec role hierarchique.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| family_id | INTEGER | FK vers families |
+| user_id | INTEGER | FK vers users |
+| role | VARCHAR(30) | Role dans la famille (8 roles) |
+| joined_at | DATETIME | Date d'adhesion |
+| invited_by | INTEGER | FK vers users (qui a invite) |
+
+**Contrainte** : UNIQUE(family_id, user_id)
+
+**Roles disponibles** :
+| Role | Description |
+|------|-------------|
+| chef_famille | Administration complete (max 2 par famille) |
+| admin | Gestion complete |
+| parent | Gestion documents et taches |
+| gestionnaire | Ajout/suppression de documents |
+| enfant | Acces limite supervise |
+| editeur | Modification des documents partages |
+| lecteur | Consultation uniquement |
+| invite | Acces temporaire limite |
+
+### Table `share_links`
+Liens de partage securises a usage limite.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| token | VARCHAR(64) | Token unique securise |
+| document_id | INTEGER | FK vers documents (optionnel) |
+| family_id | INTEGER | FK vers families (optionnel) |
+| created_by | INTEGER | FK vers users |
+| expires_at | DATETIME | Date d'expiration |
+| max_uses | INTEGER | Nombre max d'utilisations |
+| use_count | INTEGER | Compteur d'utilisation |
+| is_revoked | BOOLEAN | Lien revoque |
+| granted_role | VARCHAR(30) | Role attribue au destinataire |
+| created_at | DATETIME | Date de creation |
+
+### Table `messages`
+Chat familial avec systeme d'annonces.
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | INTEGER | Cle primaire |
+| family_id | INTEGER | FK vers families |
+| sender_id | INTEGER | FK vers users |
+| content | TEXT | Contenu du message |
+| is_announcement | BOOLEAN | Message important/annonce |
+| is_deleted | BOOLEAN | Suppression douce |
+| created_at | DATETIME | Date d'envoi |
+| updated_at | DATETIME | Date de modification |
+
 ## Relations
 
 1. **Users -> Folders** : Un utilisateur possede plusieurs dossiers (1:N)
@@ -233,6 +334,12 @@ Table d'association documents-tags (N:N).
 9. **Documents -> Versions** : Un document a plusieurs versions (1:N)
 10. **Documents <-> Tags** : Relation N:N via document_tags
 11. **Users -> Tags** : Un utilisateur possede plusieurs tags (1:N)
+12. **Users -> Families** : Un utilisateur cree des familles (1:N)
+13. **Users <-> Families** : Relation N:N via family_members
+14. **Families -> Messages** : Une famille contient des messages (1:N)
+15. **Users -> Messages** : Un utilisateur envoie des messages (1:N)
+16. **Share_links -> Documents/Families** : Liens de partage (1:N)
+17. **Users -> Tasks (assigned)** : Assignation de taches a des membres (1:N)
 
 ## Index
 
@@ -243,5 +350,7 @@ Table d'association documents-tags (N:N).
 - `notifications.created_at` : Index pour le tri chronologique
 - `document_versions.created_at` : Index pour le tri des versions
 - `tags.name` : Index pour la recherche par nom
+- `share_links.token` : Index unique pour la recherche par token
 - `permissions(document_id, user_id)` : Contrainte d'unicite
 - `tags(name, owner_id)` : Contrainte d'unicite
+- `family_members(family_id, user_id)` : Contrainte d'unicite

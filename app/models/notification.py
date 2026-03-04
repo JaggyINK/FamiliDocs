@@ -12,7 +12,7 @@ class Notification(db.Model):
     __tablename__ = 'notifications'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
 
     # Type de notification
     type = db.Column(db.String(50), nullable=False)  # task_due, document_expiry, share, system
@@ -51,6 +51,7 @@ class Notification(db.Model):
         'permission_granted': 'Acces accorde',
         'permission_revoked': 'Acces revoque',
         'permission_expiring': 'Acces expire bientot',
+        'task_assigned': 'Tache assignee',
         'system': 'Notification systeme',
         'backup_complete': 'Sauvegarde terminee',
         'welcome': 'Bienvenue'
@@ -88,6 +89,7 @@ class Notification(db.Model):
             'permission_granted': 'bi-shield-check',
             'permission_revoked': 'bi-shield-x',
             'permission_expiring': 'bi-shield-exclamation',
+            'task_assigned': 'bi-person-check',
             'system': 'bi-info-circle',
             'backup_complete': 'bi-cloud-check',
             'welcome': 'bi-hand-wave'
@@ -105,19 +107,35 @@ class Notification(db.Model):
     def time_ago(self):
         """Retourne le temps ecoule depuis la creation"""
         delta = datetime.utcnow() - self.created_at
+        jours = delta.days
+        secondes = delta.seconds
 
-        if delta.days > 30:
-            return f"{delta.days // 30} mois"
-        elif delta.days > 0:
-            return f"{delta.days} jour{'s' if delta.days > 1 else ''}"
-        elif delta.seconds > 3600:
-            hours = delta.seconds // 3600
-            return f"{hours} heure{'s' if hours > 1 else ''}"
-        elif delta.seconds > 60:
-            minutes = delta.seconds // 60
-            return f"{minutes} minute{'s' if minutes > 1 else ''}"
-        else:
-            return "A l'instant"
+        # Plus d'un mois
+        if jours > 30:
+            mois = jours // 30
+            return f"{mois} mois"
+
+        # Plus d'un jour
+        if jours > 1:
+            return f"{jours} jours"
+        if jours == 1:
+            return "1 jour"
+
+        # Plus d'une heure
+        heures = secondes // 3600
+        if heures > 1:
+            return f"{heures} heures"
+        if heures == 1:
+            return "1 heure"
+
+        # Plus d'une minute
+        minutes = secondes // 60
+        if minutes > 1:
+            return f"{minutes} minutes"
+        if minutes == 1:
+            return "1 minute"
+
+        return "A l'instant"
 
     def mark_as_read(self):
         """Marque la notification comme lue"""

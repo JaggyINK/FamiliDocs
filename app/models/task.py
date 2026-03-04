@@ -21,6 +21,11 @@ class Task(db.Model):
     # Relations
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=True)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Relation pour l'assignation
+    assigned_to = db.relationship('User', foreign_keys=[assigned_to_id],
+                                   backref=db.backref('assigned_tasks', lazy='dynamic'))
 
     # Métadonnées
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -124,3 +129,41 @@ class Task(db.Model):
             document_id=document.id
         )
         return task
+
+    @staticmethod
+    def get_assigned_tasks(user_id):
+        """Récupère les tâches assignées à un utilisateur"""
+        return Task.query.filter(
+            Task.assigned_to_id == user_id,
+            Task.status.notin_(['completed', 'cancelled'])
+        ).order_by(Task.due_date).all()
+
+    @staticmethod
+    def get_family_members_for_assignment(user_id):
+        """Récupère les membres de famille pour l'assignation de tâches"""
+        from app.models.family import FamilyMember
+
+        memberships = FamilyMember.query.filter_by(user_id=user_id).all()
+        family_ids = []
+        for m in memberships:
+            family_ids.append(m.family_id)
+
+        if not family_ids:
+            return []
+
+        members = FamilyMember.query.filter(
+            FamilyMember.family_id.in_(family_ids)
+        ).all()
+
+        # Retourner les utilisateurs uniques avec leur famille
+        seen = set()
+        result = []
+        for m in members:
+            if m.user_id not in seen:
+                seen.add(m.user_id)
+                result.append({
+                    'user': m.user,
+                    'family': m.family,
+                    'role': m.role
+                })
+        return result

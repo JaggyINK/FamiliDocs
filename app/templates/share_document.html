@@ -2,6 +2,25 @@
 
 {% block title %}Partager - {{ document.name }} - FamiliDocs{% endblock %}
 
+{% block extra_css %}
+<style>
+    .user-select-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .user-select-item:hover {
+        background-color: #f8f9fa;
+    }
+    .user-select-item.selected {
+        background-color: #e7f1ff;
+        border-color: #0d6efd;
+    }
+    .family-badge {
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
@@ -13,27 +32,64 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-share me-2"></i>Partager "{{ document.name }}"</h1>
+    <a href="{{ url_for('document.my_shared_documents') }}" class="btn btn-outline-info">
+        <i class="bi bi-folder-symlink me-2"></i>Mes partages
+    </a>
 </div>
 
 <div class="row">
     <div class="col-md-7">
-        <!-- Partage avec un utilisateur -->
+        <!-- Partage avec plusieurs utilisateurs -->
         <div class="card mb-4">
             <div class="card-header">
-                <i class="bi bi-person-plus me-2"></i>Partager avec un membre
+                <i class="bi bi-people me-2"></i>Partager avec des membres
+                <span class="badge bg-primary ms-2" id="selectedCount">0</span> selectionne(s)
             </div>
             <div class="card-body">
-                {% if available_users %}
-                <form method="POST" action="{{ url_for('document.share', document_id=document.id) }}">
+                {% if available_users or family_members %}
+                <form method="POST" action="{{ url_for('document.share', document_id=document.id) }}" id="shareForm">
+                    <!-- Selection multiple d'utilisateurs -->
                     <div class="mb-3">
-                        <label for="user_id" class="form-label">Utilisateur</label>
-                        <select class="form-select" id="user_id" name="user_id" required>
-                            <option value="">-- Choisir un utilisateur --</option>
-                            {% for user in available_users %}
-                            <option value="{{ user.id }}">{{ user.full_name }} ({{ user.email }})</option>
+                        <label class="form-label">Selectionner les personnes <small class="text-muted">(cliquez pour selectionner)</small></label>
+
+                        {% if family_members %}
+                        <h6 class="mt-3 mb-2"><i class="bi bi-people-fill text-primary me-1"></i>Membres de famille</h6>
+                        <div class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
+                            {% for member in family_members %}
+                            <label class="list-group-item user-select-item d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-3 user-checkbox"
+                                       name="user_ids" value="{{ member.user.id }}">
+                                <div class="flex-grow-1">
+                                    <strong>{{ member.user.full_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ member.user.email }}</small>
+                                </div>
+                                <span class="badge bg-secondary family-badge">{{ member.family.name }}</span>
+                                <span class="badge bg-light text-dark ms-1 family-badge">{{ member.role }}</span>
+                            </label>
                             {% endfor %}
-                        </select>
+                        </div>
+                        {% endif %}
+
+                        {% if available_users %}
+                        <h6 class="mt-3 mb-2"><i class="bi bi-person me-1"></i>Autres utilisateurs</h6>
+                        <div class="list-group" style="max-height: 200px; overflow-y: auto;">
+                            {% for user in available_users %}
+                            <label class="list-group-item user-select-item d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-3 user-checkbox"
+                                       name="user_ids" value="{{ user.id }}">
+                                <div class="flex-grow-1">
+                                    <strong>{{ user.full_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
+                    <hr>
 
                     <div class="mb-3">
                         <label class="form-label">Droits d'acces</label>
@@ -64,9 +120,12 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="end_date" class="form-label">Date d'expiration (optionnel)</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date">
-                        <small class="text-muted">Laisser vide pour un acces permanent</small>
+                        <label for="end_date" class="form-label">Date d'expiration</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date"
+                               min="{{ today }}" max="{{ max_date }}">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Maximum 90 jours. Laisser vide = permanent (renouvellement manuel requis).
+                        </small>
                     </div>
 
                     <div class="mb-3">
@@ -75,12 +134,15 @@
                                   placeholder="Raison du partage..."></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-share me-2"></i>Partager
+                    <button type="submit" class="btn btn-primary" id="shareBtn" disabled>
+                        <i class="bi bi-share me-2"></i>Partager avec <span id="shareCount">0</span> personne(s)
                     </button>
                 </form>
                 {% else %}
-                <p class="text-muted text-center mb-0">Aucun utilisateur disponible pour le partage</p>
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Tous les utilisateurs ont deja acces a ce document, ou vous n'avez pas de contacts disponibles.
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -125,7 +187,7 @@
                 {% for link in share_links %}
                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
                     <div>
-                        <code class="small">{{ url_for('family.accept_share_link', token=link.token, _external=True) }}</code>
+                        <code class="small">{{ url_for('family.accept_share_link', token=link.token, _external=True)[:50] }}...</code>
                         <br>
                         <small class="text-muted">
                             Expire: {{ link.expires_at.strftime('%d/%m/%Y %H:%M') }} |
@@ -133,11 +195,11 @@
                         </small>
                     </div>
                     <div>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('{{ url_for('family.accept_share_link', token=link.token, _external=True) }}')">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ url_for('family.accept_share_link', token=link.token, _external=True)|tojson }})" title="Copier">
                             <i class="bi bi-clipboard"></i>
                         </button>
                         <form method="POST" action="{{ url_for('family.revoke_share_link', link_id=link.id) }}" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoquer">
                                 <i class="bi bi-x"></i>
                             </button>
                         </form>
@@ -152,13 +214,14 @@
     <div class="col-md-5">
         <!-- Permissions existantes -->
         <div class="card">
-            <div class="card-header">
-                <i class="bi bi-people me-2"></i>Acces actuels ({{ existing_permissions|length }})
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people me-2"></i>Acces actuels</span>
+                <span class="badge bg-primary">{{ existing_permissions|length }}</span>
             </div>
-            <div class="card-body">
+            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
                 {% if existing_permissions %}
                 {% for perm in existing_permissions %}
-                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom">
                     <div>
                         <strong>{{ perm.granted_user.full_name }}</strong>
                         <br>
@@ -177,26 +240,92 @@
                         <span class="badge bg-info badge-sm">Partage</span>
                         {% endif %}
                         {% if perm.end_date %}
-                        <br><small class="text-{{ 'danger' if perm.status == 'expired' else 'muted' }}">
-                            Expire: {{ perm.end_date.strftime('%d/%m/%Y') }}
+                        <br><small class="text-{{ 'danger' if not perm.is_valid() else 'muted' }}">
+                            <i class="bi bi-calendar me-1"></i>Expire: {{ perm.end_date.strftime('%d/%m/%Y') }}
                         </small>
                         {% else %}
-                        <br><small class="text-muted">Permanent</small>
+                        <br><small class="text-muted"><i class="bi bi-infinity me-1"></i>Permanent</small>
                         {% endif %}
                     </div>
                     <form method="POST" action="{{ url_for('document.revoke_access', document_id=document.id, user_id=perm.user_id) }}"
-                          onsubmit="return confirm('Revoquer l\'acces ?');">
+                          onsubmit="return confirm('Revoquer l\'acces de {{ perm.granted_user.first_name }} ?');">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoquer">
                             <i class="bi bi-x-circle"></i>
                         </button>
                     </form>
                 </div>
                 {% endfor %}
+
+                <!-- Bouton revoquer tous -->
+                {% if existing_permissions|length > 1 %}
+                <form method="POST" action="{{ url_for('document.revoke_all_access', document_id=document.id) }}"
+                      onsubmit="return confirm('Revoquer TOUS les acces ? Cette action est irreversible.');">
+                    <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
+                        <i class="bi bi-x-circle me-2"></i>Revoquer tous les acces
+                    </button>
+                </form>
+                {% endif %}
                 {% else %}
-                <p class="text-muted text-center mb-0">Aucun partage en cours</p>
+                <p class="text-muted text-center mb-0">
+                    <i class="bi bi-lock me-2"></i>Aucun partage en cours
+                </p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Gestion de la selection multiple
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    const shareCount = document.getElementById('shareCount');
+    const shareBtn = document.getElementById('shareBtn');
+
+    function updateCount() {
+        const checked = document.querySelectorAll('.user-checkbox:checked').length;
+        selectedCount.textContent = checked;
+        shareCount.textContent = checked;
+        shareBtn.disabled = checked === 0;
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            this.closest('.user-select-item').classList.toggle('selected', this.checked);
+            updateCount();
+        });
+    });
+
+    // Clic sur la ligne = toggle checkbox
+    document.querySelectorAll('.user-select-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox') {
+                const cb = this.querySelector('.user-checkbox');
+                cb.checked = !cb.checked;
+                this.classList.toggle('selected', cb.checked);
+                updateCount();
+            }
+        });
+    });
+});
+
+// Copier dans le presse-papier
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Lien copie !');
+    }).catch(() => {
+        // Fallback pour navigateurs sans support clipboard API
+        var textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Lien copie !');
+    });
+}
+</script>
 {% endblock %}

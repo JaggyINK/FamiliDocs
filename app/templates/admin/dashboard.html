@@ -7,55 +7,57 @@
     <h1><i class="bi bi-gear-fill me-2"></i>Administration</h1>
 </div>
 
-<!-- Statistiques -->
+<!-- Statistiques (cartes cliquables) -->
 <div class="row mb-4">
     <div class="col-md-2 mb-3">
-        <div class="card bg-primary text-white">
+        <a href="{{ url_for('admin.users') }}" class="card bg-primary text-white text-decoration-none">
             <div class="card-body text-center">
                 <h3 class="mb-0">{{ stats.total_users }}</h3>
                 <small>Utilisateurs</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card bg-success text-white">
+        <a href="{{ url_for('admin.users') }}" class="card bg-success text-white text-decoration-none">
             <div class="card-body text-center">
                 <h3 class="mb-0">{{ stats.active_users }}</h3>
                 <small>Actifs</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card bg-info text-white">
+        <a href="{{ url_for('document.list_documents') }}" class="card bg-info text-white text-decoration-none">
             <div class="card-body text-center">
                 <h3 class="mb-0">{{ stats.total_documents }}</h3>
                 <small>Documents</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card bg-secondary text-white">
+        <a href="{{ url_for('user.folders') }}" class="card bg-secondary text-white text-decoration-none">
             <div class="card-body text-center">
                 <h3 class="mb-0">{{ stats.total_folders }}</h3>
                 <small>Dossiers</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card bg-warning text-dark">
+        <a href="{{ url_for('task.list_tasks') }}" class="card bg-warning text-dark text-decoration-none" title="Voir toutes les taches : en cours, terminees, en attente">
             <div class="card-body text-center">
                 <h3 class="mb-0">{{ stats.total_tasks }}</h3>
                 <small>Taches</small>
+                <div class="mt-1"><small style="font-size: 0.65rem; opacity: 0.8;">Toutes les taches</small></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card bg-danger text-white">
+        <a href="{{ url_for('task.list_tasks') }}" class="card bg-danger text-white text-decoration-none" title="Taches en attente de traitement ou assignation">
             <div class="card-body text-center">
                 <h3 class="mb-0">{{ stats.pending_tasks }}</h3>
                 <small>En attente</small>
+                <div class="mt-1"><small style="font-size: 0.65rem; opacity: 0.8;">A traiter / assigner</small></div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 

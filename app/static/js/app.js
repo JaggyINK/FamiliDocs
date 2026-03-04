@@ -19,6 +19,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validation des formulaires
     initFormValidation();
+
+    // T18 - Progress bar upload
+    initUploadProgress();
+
+    // T20 - Session expiry warning
+    initSessionWarning();
+
+    // T34 - Raccourcis clavier
+    initKeyboardShortcuts();
 });
 
 /**
@@ -112,7 +121,7 @@ function showNotification(message, type) {
     alertDiv.innerHTML = message +
         '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
 
-    var container = document.querySelector('.container');
+    var container = document.querySelector('.flash-container') || document.querySelector('.main-content') || document.querySelector('.container');
     if (container) {
         container.insertBefore(alertDiv, container.firstChild);
 
@@ -171,6 +180,156 @@ function checkPasswordStrength(password) {
     if (password.match(/[^a-zA-Z0-9]/)) strength++;
 
     return strength;
+}
+
+/**
+ * T17 - Bulk selection pour documents
+ */
+function toggleBulkSelect(checkbox) {
+    var bar = document.getElementById('bulkActionBar');
+    var countSpan = document.getElementById('bulkCount');
+    var checked = document.querySelectorAll('.bulk-check:checked');
+    if (bar) {
+        bar.style.display = checked.length > 0 ? 'block' : 'none';
+        if (countSpan) countSpan.textContent = checked.length;
+    }
+}
+
+function selectAllDocs(master) {
+    var checkboxes = document.querySelectorAll('.bulk-check');
+    checkboxes.forEach(function(cb) { cb.checked = master.checked; });
+    toggleBulkSelect(master);
+}
+
+function submitBulk(action) {
+    if (!confirm('Confirmer cette operation sur les documents selectionnes ?')) return;
+    var form = document.getElementById('bulkForm');
+    document.getElementById('bulkActionType').value = action;
+    var container = document.getElementById('bulkIds');
+    container.innerHTML = '';
+    document.querySelectorAll('.bulk-check:checked').forEach(function(cb) {
+        var input = document.createElement('input');
+        input.type = 'hidden'; input.name = 'doc_ids'; input.value = cb.value;
+        container.appendChild(input);
+    });
+    form.submit();
+}
+
+function clearBulk() {
+    document.querySelectorAll('.bulk-check').forEach(function(cb) { cb.checked = false; });
+    var master = document.getElementById('selectAll');
+    if (master) master.checked = false;
+    toggleBulkSelect(null);
+}
+
+/**
+ * T18 - Progress bar pour upload de fichiers
+ */
+function initUploadProgress() {
+    var uploadForms = document.querySelectorAll('form[enctype="multipart/form-data"]');
+    uploadForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            var fileInput = form.querySelector('input[type="file"]');
+            if (!fileInput || !fileInput.files.length) return;
+
+            e.preventDefault();
+            var formData = new FormData(form);
+
+            // Creer la barre de progression
+            var progressWrap = document.createElement('div');
+            progressWrap.className = 'progress mt-3';
+            progressWrap.innerHTML = '<div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>';
+            form.appendChild(progressWrap);
+            var progressBar = progressWrap.querySelector('.progress-bar');
+
+            // Desactiver le bouton submit
+            var submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    var pct = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = pct + '%';
+                    progressBar.textContent = pct + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 400) {
+                    // Rediriger vers la reponse
+                    if (xhr.responseURL) {
+                        window.location.href = xhr.responseURL;
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.add('bg-danger');
+                    progressBar.textContent = 'Erreur';
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            };
+
+            xhr.onerror = function() {
+                progressBar.classList.add('bg-danger');
+                progressBar.textContent = 'Erreur reseau';
+                if (submitBtn) submitBtn.disabled = false;
+            };
+
+            // Ajouter le CSRF token
+            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            if (csrfMeta) {
+                xhr.setRequestHeader('X-CSRFToken', csrfMeta.getAttribute('content'));
+            }
+
+            xhr.send(formData);
+        });
+    });
+}
+
+/**
+ * T20 - Avertissement expiration de session (2h - 5min = 115min)
+ */
+function initSessionWarning() {
+    // Ne pas activer sur les pages non authentifiees
+    if (!document.querySelector('.sidebar')) return;
+
+    var SESSION_DURATION = 120 * 60 * 1000; // 2h en ms
+    var WARNING_BEFORE = 5 * 60 * 1000; // 5 min avant
+
+    setTimeout(function() {
+        var toast = document.createElement('div');
+        toast.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+        toast.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        toast.innerHTML = '<i class="bi bi-clock me-2"></i><strong>Session bientot expiree</strong><br>Votre session expire dans 5 minutes. Sauvegardez votre travail.' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.body.appendChild(toast);
+    }, SESSION_DURATION - WARNING_BEFORE);
+}
+
+/**
+ * T34 - Raccourcis clavier
+ */
+function initKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+K : focus recherche
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            var searchInput = document.getElementById('quickSearchInput');
+            if (searchInput) searchInput.focus();
+        }
+        // Escape : fermer les modals ouvertes
+        if (e.key === 'Escape') {
+            var openModals = document.querySelectorAll('.modal.show');
+            openModals.forEach(function(modal) {
+                var bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+            });
+        }
+    });
 }
 
 /**

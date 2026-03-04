@@ -11,8 +11,8 @@ class Permission(db.Model):
     __tablename__ = 'permissions'
 
     id = db.Column(db.Integer, primary_key=True)
-    document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     granted_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     # Type de permission

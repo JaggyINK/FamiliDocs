@@ -24,6 +24,9 @@ class Document(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     expiry_date = db.Column(db.Date, nullable=True)  # Date d'échéance du document
+    # N2 - Date de prochaine revision/mise a jour
+    next_review_date = db.Column(db.Date, nullable=True)
+    last_reviewed_at = db.Column(db.DateTime, nullable=True)
 
     # Relations
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -34,7 +37,8 @@ class Document(db.Model):
                                   cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='document', lazy='dynamic',
                             cascade='all, delete-orphan')
-    logs = db.relationship('Log', backref='document', lazy='dynamic')
+    logs = db.relationship('Log', backref='document', lazy='dynamic',
+                           cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Document {self.name}>'
@@ -66,13 +70,46 @@ class Document(db.Model):
         """Retourne la taille du fichier en format lisible"""
         if not self.file_size:
             return 'Inconnu'
+        size = self.file_size
         for unit in ['o', 'Ko', 'Mo', 'Go']:
-            if self.file_size < 1024:
-                return f'{self.file_size:.1f} {unit}'
-            self.file_size /= 1024
-        return f'{self.file_size:.1f} To'
+            if size < 1024:
+                return f'{size:.1f} {unit}'
+            size /= 1024
+        return f'{size:.1f} To'
 
     def is_shared_with(self, user):
         """Vérifie si le document est partagé avec un utilisateur"""
         permission = self.permissions.filter_by(user_id=user.id).first()
         return permission is not None and permission.is_valid()
+
+    @property
+    def needs_review(self):
+        """Verifie si le document necessite une revision"""
+        if not self.next_review_date:
+            return False
+        from datetime import date
+        return self.next_review_date <= date.today()
+
+    @property
+    def review_soon(self):
+        """Verifie si le document doit etre revise dans les 7 prochains jours"""
+        if not self.next_review_date:
+            return False
+        from datetime import date, timedelta
+        today = date.today()
+        return today <= self.next_review_date <= today + timedelta(days=7)
+
+    def mark_reviewed(self):
+        """Marque le document comme revise"""
+        self.last_reviewed_at = datetime.utcnow()
+
+    @staticmethod
+    def get_documents_needing_review(user_id, days=7):
+        """Recupere les documents necessitant une revision"""
+        from datetime import date, timedelta
+        target_date = date.today() + timedelta(days=days)
+        return Document.query.filter(
+            Document.owner_id == user_id,
+            Document.next_review_date != None,
+            Document.next_review_date <= target_date
+        ).order_by(Document.next_review_date).all()
