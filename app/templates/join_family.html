@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Rejoindre {{ family.name }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="bi bi-people-fill text-primary" style="font-size: 3rem;"></i>
+                    <h2 class="mt-2">Invitation a rejoindre</h2>
+                    <h3 class="text-primary">{{ family.name }}</h3>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Vous avez ete invite a rejoindre le groupe familial <strong>{{ family.name }}</strong>
+                    en tant que <span class="badge bg-secondary">{{ role_name }}</span>.
+                </div>
+
+                {% if family.description %}
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Description du groupe</h6>
+                        <p class="card-text mb-0">{{ family.description }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row text-center mb-4">
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-people text-muted" style="font-size: 1.5rem;"></i>
+                            <h5 class="mb-0 mt-2">{{ family.member_count }}</h5>
+                            <small class="text-muted">Membre(s)</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-clock text-muted" style="font-size: 1.5rem;"></i>
+                            <h5 class="mb-0 mt-2">{{ link.remaining_uses }}</h5>
+                            <small class="text-muted">Place(s) restante(s)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <p class="text-center text-muted mb-4">
+                    Pour rejoindre ce groupe, connectez-vous ou creez un compte.
+                </p>
+
+                <div class="d-grid gap-3">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>J'ai deja un compte - Me connecter
+                    </a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-person-plus me-2"></i>Creer un compte
+                    </a>
+                </div>
+
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Apres connexion, vous serez automatiquement ajoute au groupe.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

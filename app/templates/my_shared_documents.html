@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Mes documents partages - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-share me-2"></i>Mes documents partages</h1>
+    <a href="{{ url_for('document.shared_documents') }}" class="btn btn-outline-primary">
+        <i class="bi bi-folder-symlink me-2"></i>Partages avec moi
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Cette page liste les documents que <strong>vous avez partages</strong> avec d'autres personnes.
+</div>
+
+{% if docs_with_shares %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Document</th>
+                <th>Type</th>
+                <th>Partage avec</th>
+                <th>Nb partages</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in docs_with_shares %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('document.view', document_id=item.document.id) }}" class="text-decoration-none">
+                        <i class="bi bi-file-earmark-{{ item.document.file_type }} me-2"></i>
+                        {{ item.document.name }}
+                    </a>
+                </td>
+                <td><span class="badge bg-secondary">{{ item.document.file_type }}</span></td>
+                <td>
+                    {% for perm in item.permissions[:3] %}
+                    <span class="badge bg-light text-dark me-1">
+                        <i class="bi bi-person me-1"></i>{{ perm.granted_user.first_name }}
+                    </span>
+                    {% endfor %}
+                    {% if item.permissions|length > 3 %}
+                    <span class="badge bg-primary">+{{ item.permissions|length - 3 }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-info">{{ item.share_count }} personne{% if item.share_count > 1 %}s{% endif %}</span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('document.share', document_id=item.document.id) }}"
+                           class="btn btn-outline-primary" title="Gerer les partages">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                        <a href="{{ url_for('document.view', document_id=item.document.id) }}"
+                           class="btn btn-outline-secondary" title="Voir le document">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Resume -->
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h3 class="mb-0">{{ docs_with_shares|length }}</h3>
+                <small class="text-muted">Document(s) partage(s)</small>
+            </div>
+            <div class="col-md-4">
+                <h3 class="mb-0">{{ docs_with_shares|sum(attribute='share_count') }}</h3>
+                <small class="text-muted">Partage(s) actif(s)</small>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('document.list_documents') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-folder me-2"></i>Tous mes documents
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-share text-muted" style="font-size: 4rem;"></i>
+    <h4 class="mt-3">Aucun document partage</h4>
+    <p class="text-muted">Vous n'avez partage aucun de vos documents avec d'autres personnes.</p>
+    <a href="{{ url_for('document.list_documents') }}" class="btn btn-primary">
+        <i class="bi bi-folder me-2"></i>Voir mes documents
+    </a>
+</div>
+{% endif %}
+{% endblock %}

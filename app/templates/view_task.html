@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('task.list_tasks') }}">Taches</a></li>
+        <li class="breadcrumb-item active">{{ task.title }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center
+                {% if task.is_overdue %}bg-danger text-white{% elif task.is_due_soon %}bg-warning{% endif %}">
+                <h5 class="mb-0">
+                    {% if task.status == 'completed' %}
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                    {% elif task.status == 'in_progress' %}
+                    <i class="bi bi-arrow-repeat text-info me-2"></i>
+                    {% elif task.status == 'cancelled' %}
+                    <i class="bi bi-x-circle me-2"></i>
+                    {% elif task.is_overdue %}
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    {% else %}
+                    <i class="bi bi-circle me-2"></i>
+                    {% endif %}
+                    {{ task.title }}
+                </h5>
+                <span class="badge bg-{{ task.priority_color }}">{{ task.priority }}</span>
+            </div>
+            <div class="card-body">
+                {% if task.description %}
+                <div class="mb-4">
+                    <h6><i class="bi bi-text-paragraph me-2"></i>Description</h6>
+                    <p class="card-text">{{ task.description }}</p>
+                </div>
+                <hr>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th><i class="bi bi-flag me-2"></i>Statut</th>
+                                <td>
+                                    {% if task.status == 'pending' %}
+                                    <span class="badge bg-secondary">En attente</span>
+                                    {% elif task.status == 'in_progress' %}
+                                    <span class="badge bg-info">En cours</span>
+                                    {% elif task.status == 'completed' %}
+                                    <span class="badge bg-success">Terminee</span>
+                                    {% elif task.status == 'cancelled' %}
+                                    <span class="badge bg-dark">Annulee</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-calendar-event me-2"></i>Echeance</th>
+                                <td>
+                                    <span class="{% if task.is_overdue %}text-danger fw-bold{% elif task.is_due_soon %}text-warning{% endif %}">
+                                        {{ task.due_date.strftime('%d/%m/%Y') }}
+                                        {% if task.is_overdue %}
+                                        <i class="bi bi-exclamation-circle ms-1"></i>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-bell me-2"></i>Rappel</th>
+                                <td>{{ task.reminder_days }} jours avant</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th><i class="bi bi-calendar-plus me-2"></i>Creee le</th>
+                                <td>{{ task.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            {% if task.completed_at %}
+                            <tr>
+                                <th><i class="bi bi-calendar-check me-2"></i>Terminee le</th>
+                                <td>{{ task.completed_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th><i class="bi bi-file-earmark me-2"></i>Document lie</th>
+                                <td>
+                                    {% if task.document %}
+                                    <a href="{{ url_for('document.view', document_id=task.document.id) }}">
+                                        {{ task.document.name }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">Aucun</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                {% if task.is_overdue and task.status not in ['completed', 'cancelled'] %}
+                <div class="alert alert-danger mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Attention !</strong> Cette tache est en retard.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>Actions
+            </div>
+            <div class="card-body d-grid gap-2">
+                {% if task.status not in ['completed', 'cancelled'] %}
+                    {% if task.status == 'pending' %}
+                    <form method="POST" action="{{ url_for('task.change_status', task_id=task.id, status='in_progress') }}">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="bi bi-play-fill me-2"></i>Demarrer
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('task.change_status', task_id=task.id, status='completed') }}">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-lg me-2"></i>Marquer terminee
+                        </button>
+                    </form>
+                {% endif %}
+
+                <a href="{{ url_for('task.edit', task_id=task.id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="Modifier les details de la tache">
+                    <i class="bi bi-pencil me-2"></i>Modifier
+                </a>
+
+                {% if task.status not in ['completed', 'cancelled'] %}
+                <form method="POST" action="{{ url_for('task.change_status', task_id=task.id, status='cancelled') }}"
+                      onsubmit="return confirm('Annuler cette tache ?');">
+                    <button type="submit" class="btn btn-outline-warning w-100">
+                        <i class="bi bi-x-circle me-2"></i>Annuler
+                    </button>
+                </form>
+                {% endif %}
+
+                <hr>
+
+                <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
+                    <i class="bi bi-trash me-2"></i>Supprimer
+                </button>
+            </div>
+        </div>
+
+<!-- Modal confirmation suppression -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteTaskModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <p>Etes-vous sur de vouloir supprimer definitivement la tache <strong>{{ task.title }}</strong> ?</p>
+                <p class="text-muted small mb-0">Cette action est irreversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('task.delete', task_id=task.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- Raccourcis -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-link-45deg me-2"></i>Raccourcis
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="{{ url_for('task.list_tasks') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-list-task me-2"></i>Toutes les taches
+                </a>
+                <a href="{{ url_for('task.calendar') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar3 me-2"></i>Calendrier
+                </a>
+                <a href="{{ url_for('task.create') }}" class="btn btn-outline-success">
+                    <i class="bi bi-plus-lg me-2"></i>Nouvelle tache
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

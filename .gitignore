@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+
+# Database
+*.db
+*.sqlite3
+app/database/*.db
+
+# Secret keys and encryption keys
+app/database/.secret_key
+app/database/.encryption_key
+
+# Uploads and backups
+app/database/uploads/
+app/database/backups/
+backups/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.spec
+
+# PyInstaller
+*.exe
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db

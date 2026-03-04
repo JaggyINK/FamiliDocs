@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvelle Tache - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('task.list_tasks') }}">Taches</a></li>
+        <li class="breadcrumb-item active">Nouvelle tache</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle tache</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('task.create') }}">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Titre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required
+                               placeholder="Ex: Renouveler carte d'identite">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Details de la tache..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="due_date" class="form-label">Date d'echeance <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="due_date" name="due_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="priority" class="form-label">Priorite</label>
+                            <select class="form-select" id="priority" name="priority">
+                                <option value="low">Basse</option>
+                                <option value="normal" selected>Normale</option>
+                                <option value="high">Haute</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="document_id" class="form-label">Document lie (optionnel)</label>
+                            <select class="form-select" id="document_id" name="document_id">
+                                <option value="">-- Aucun document --</option>
+                                {% for doc in documents %}
+                                <option value="{{ doc.id }}">{{ doc.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="reminder_days" class="form-label">Rappel (jours avant)</label>
+                            <select class="form-select" id="reminder_days" name="reminder_days">
+                                <option value="1">1 jour avant</option>
+                                <option value="3">3 jours avant</option>
+                                <option value="7" selected>7 jours avant</option>
+                                <option value="14">14 jours avant</option>
+                                <option value="30">30 jours avant</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {% if family_members %}
+                    <div class="mb-3">
+                        <label for="assigned_to_id" class="form-label">
+                            <i class="bi bi-person-check me-1"></i>Assigner a (optionnel)
+                        </label>
+                        <select class="form-select" id="assigned_to_id" name="assigned_to_id">
+                            <option value="">-- Moi-meme --</option>
+                            {% for member in family_members %}
+                            <option value="{{ member.user.id }}">
+                                {{ member.user.full_name }} ({{ member.family.name }} - {{ member.role }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>La personne assignee recevra une notification.
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('task.list_tasks') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Creer la tache
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Date minimum = aujourd'hui
+    document.getElementById('due_date').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}
