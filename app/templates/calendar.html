@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Calendrier des Taches - FamiliDocs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    #calendar {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+    .fc-event {
+        cursor: pointer;
+    }
+    .fc-toolbar-title {
+        font-size: 1.3rem !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-calendar3 me-2"></i>Calendrier des Taches</h1>
+    <div>
+        <a href="{{ url_for('task.list_tasks') }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-list-task me-2"></i>Liste
+        </a>
+        <a href="{{ url_for('task.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>Nouvelle tache
+        </a>
+    </div>
+</div>
+
+<!-- Legende -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-3 align-items-center">
+            <strong class="me-2">Legende :</strong>
+            <span><span class="badge" style="background-color: #dc3545;">&nbsp;</span> En retard</span>
+            <span><span class="badge" style="background-color: #fd7e14;">&nbsp;</span> Urgent</span>
+            <span><span class="badge" style="background-color: #ffc107;">&nbsp;</span> Priorite haute</span>
+            <span><span class="badge" style="background-color: #0d6efd;">&nbsp;</span> Normal</span>
+        </div>
+    </div>
+</div>
+
+<!-- Calendrier -->
+<div class="card">
+    <div class="card-body">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Modal detail tache -->
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskModalTitle">Detail de la tache</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="taskModalBody">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <a href="#" class="btn btn-primary" id="taskModalLink">Voir details</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<!-- La locale FR est incluse dans le bundle principal FullCalendar -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+
+    var events = [
+        {% for event in events %}
+        {
+            id: {{ event.id|tojson }},
+            title: {{ event.title|tojson }},
+            start: {{ event.start|tojson }},
+            color: {{ event.color|tojson }},
+            url: {{ event.url|tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'fr',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        events: events,
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+
+            // Ouvrir le modal avec les infos
+            document.getElementById('taskModalTitle').textContent = info.event.title;
+            document.getElementById('taskModalBody').innerHTML = `
+                <p><strong>Date d'echeance :</strong> ${new Date(info.event.start).toLocaleDateString('fr-FR')}</p>
+                <p><strong>Cliquez sur "Voir details" pour plus d'informations.</strong></p>
+            `;
+            var taskLink = document.getElementById('taskModalLink');
+            if (info.event.url) {
+                taskLink.href = info.event.url;
+                taskLink.style.display = '';
+            } else {
+                taskLink.style.display = 'none';
+            }
+
+            var modal = new bootstrap.Modal(document.getElementById('taskModal'));
+            modal.show();
+        },
+        eventDidMount: function(info) {
+            // Tooltip au survol
+            info.el.title = info.event.title + ' - ' + new Date(info.event.start).toLocaleDateString('fr-FR');
+        },
+        dayMaxEvents: 3,
+        moreLinkText: function(num) {
+            return '+' + num + ' autres';
+        }
+    });
+
+    calendar.render();
+});
+</script>
+{% endblock %}

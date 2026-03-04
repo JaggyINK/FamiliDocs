@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier {{ document.name }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('document.list_documents') }}">Documents</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('document.view', document_id=document.id) }}">{{ document.name }}</a></li>
+        <li class="breadcrumb-item active">Modifier</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-pencil me-2"></i>Modifier le document</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('document.edit', document_id=document.id) }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nom du document <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               value="{{ document.name }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Description optionnelle...">{{ document.description or '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="folder_id" class="form-label">Dossier</label>
+                            <select class="form-select" id="folder_id" name="folder_id">
+                                <option value="">-- Racine --</option>
+                                {% for folder in folders %}
+                                <option value="{{ folder.id }}" {% if document.folder_id == folder.id %}selected{% endif %}>
+                                    {{ folder.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="confidentiality" class="form-label">Confidentialite</label>
+                            <select class="form-select" id="confidentiality" name="confidentiality">
+                                {% for level, label in confidentiality_levels.items() %}
+                                <option value="{{ level }}" {% if document.confidentiality == level %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="expiry_date" class="form-label">Date d'echeance</label>
+                            <input type="date" class="form-control" id="expiry_date" name="expiry_date"
+                                   value="{{ document.expiry_date.strftime('%Y-%m-%d') if document.expiry_date else '' }}">
+                            <div class="form-text">Date d'expiration du document</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="next_review_date" class="form-label">
+                                <i class="bi bi-arrow-repeat me-1"></i>Prochaine revision
+                            </label>
+                            <input type="date" class="form-control" id="next_review_date" name="next_review_date"
+                                   value="{{ document.next_review_date.strftime('%Y-%m-%d') if document.next_review_date else '' }}">
+                            <div class="form-text">Rappel pour mettre a jour ce document</div>
+                        </div>
+                    </div>
+
+                    {% if document.last_reviewed_at %}
+                    <div class="alert alert-success py-2 mb-3">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Derniere revision effectuee le {{ document.last_reviewed_at.strftime('%d/%m/%Y a %H:%M') }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Info fichier -->
+                    <div class="alert alert-light">
+                        <h6><i class="bi bi-info-circle me-2"></i>Informations du fichier</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">
+                                    <strong>Fichier original :</strong> {{ document.original_filename }}
+                                </small>
+                                <small class="text-muted d-block">
+                                    <strong>Type :</strong> {{ document.file_type }}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">
+                                    <strong>Taille :</strong> {{ document.get_human_readable_size() }}
+                                </small>
+                                <small class="text-muted d-block">
+                                    <strong>Ajoute le :</strong> {{ document.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lien vers versions -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Pour mettre a jour le fichier lui-meme, utilisez
+                        <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="alert-link">
+                            l'historique des versions
+                        </a>.
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('document.view', document_id=document.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

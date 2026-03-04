@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Partager dossier - {{ folder.name }} - FamiliDocs{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('user.folders') }}">Dossiers</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('user.view_folder', folder_id=folder.id) }}">{{ folder.name }}</a></li>
+        <li class="breadcrumb-item active">Partager</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-folder-symlink me-2"></i>Partager le dossier "{{ folder.name }}"</h1>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Cette action va partager <strong>{{ doc_count }} document(s)</strong> contenus dans ce dossier.
+    Les sous-dossiers ne sont pas inclus.
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Partager avec
+            </div>
+            <div class="card-body">
+                {% if family_members or available_users %}
+                <form method="POST" action="{{ url_for('user.share_folder', folder_id=folder.id) }}">
+                    <!-- Selection des personnes -->
+                    <div class="mb-3">
+                        <label class="form-label">Selectionner les personnes</label>
+
+                        {% if family_members %}
+                        <h6 class="mt-3 mb-2"><i class="bi bi-people-fill text-primary me-1"></i>Membres de famille</h6>
+                        <div class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
+                            {% for member in family_members %}
+                            <label class="list-group-item d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-3" name="user_ids" value="{{ member.user.id }}">
+                                <div class="flex-grow-1">
+                                    <strong>{{ member.user.full_name }}</strong>
+                                    <small class="text-muted ms-2">{{ member.family.name }}</small>
+                                </div>
+                                <span class="badge bg-secondary">{{ member.role }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if available_users %}
+                        <h6 class="mt-3 mb-2"><i class="bi bi-person me-1"></i>Autres utilisateurs</h6>
+                        <div class="list-group" style="max-height: 150px; overflow-y: auto;">
+                            {% for user in available_users %}
+                            <label class="list-group-item d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-3" name="user_ids" value="{{ user.id }}">
+                                <strong>{{ user.full_name }}</strong>
+                                <small class="text-muted ms-2">{{ user.email }}</small>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <!-- Droits -->
+                    <div class="mb-3">
+                        <label class="form-label">Droits d'acces</label>
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="can_download" name="can_download" checked>
+                                    <label class="form-check-label" for="can_download">
+                                        <i class="bi bi-download me-1"></i>Telechargement
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="can_edit" name="can_edit">
+                                    <label class="form-check-label" for="can_edit">
+                                        <i class="bi bi-pencil me-1"></i>Modification
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="can_share" name="can_share">
+                                    <label class="form-check-label" for="can_share">
+                                        <i class="bi bi-share me-1"></i>Re-partage
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date expiration -->
+                    <div class="mb-3">
+                        <label for="end_date" class="form-label">Date d'expiration (max 90 jours)</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date"
+                               min="{{ today }}" max="{{ max_date }}">
+                        <small class="text-muted">Laisser vide = acces permanent</small>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('user.view_folder', folder_id=folder.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-share me-2"></i>Partager {{ doc_count }} document(s)
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucun utilisateur disponible pour le partage.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Resume dossier -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-folder me-2"></i>Resume
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Dossier</th>
+                        <td>{{ folder.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Categorie</th>
+                        <td><span class="badge bg-secondary">{{ folder.category }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Documents</th>
+                        <td>{{ doc_count }}</td>
+                    </tr>
+                </table>
+
+                {% if doc_count == 0 %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Ce dossier est vide. Ajoutez des documents avant de partager.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
