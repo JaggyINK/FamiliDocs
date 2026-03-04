@@ -3,81 +3,70 @@
 {% block title %}Inscription - FamiliDocs{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card shadow">
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <i class="bi bi-person-plus-fill text-primary" style="font-size: 3rem;"></i>
-                    <h2 class="mt-2">Creer un compte</h2>
-                    <p class="text-muted">Rejoignez FamiliDocs</p>
-                </div>
+{% if pending_invite %}
+<div class="alert alert-success mb-3" style="max-width: 480px;">
+    <strong>Invitation en attente</strong><br>
+    Creez votre compte pour rejoindre <strong>{{ pending_invite.family_name }}</strong>
+    en tant que <span class="badge bg-secondary">{{ pending_invite.role }}</span>
+</div>
+{% endif %}
 
-                <form method="POST" action="{{ url_for('auth.register') }}">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="first_name" class="form-label">Prenom</label>
-                            <input type="text" class="form-control" id="first_name" name="first_name"
-                                   placeholder="Votre prenom" required>
-                        </div>
+<div class="auth-card register">
+    <h1 class="auth-title">Creer un compte</h1>
+    <p class="auth-subtitle">{% if pending_invite %}Rejoignez {{ pending_invite.family_name }}{% else %}Rejoignez FamiliDocs{% endif %}</p>
 
-                        <div class="col-md-6 mb-3">
-                            <label for="last_name" class="form-label">Nom</label>
-                            <input type="text" class="form-control" id="last_name" name="last_name"
-                                   placeholder="Votre nom" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Nom d'utilisateur</label>
-                        <div class="input-group">
-                            <span class="input-group-text">@</span>
-                            <input type="text" class="form-control" id="username" name="username"
-                                   placeholder="utilisateur" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" class="form-control" id="email" name="email"
-                                   placeholder="votre@email.com" required>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="password" class="form-label">Mot de passe</label>
-                            <input type="password" class="form-control" id="password" name="password"
-                                   placeholder="Mot de passe" required>
-                            <div class="form-text">
-                                Min. 8 caracteres, 1 majuscule, 1 chiffre, 1 caractere special
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="password_confirm" class="form-label">Confirmer</label>
-                            <input type="password" class="form-control" id="password_confirm" name="password_confirm"
-                                   placeholder="Confirmer le mot de passe" required>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-person-plus me-2"></i>Creer mon compte
-                    </button>
-                </form>
-
-                <hr class="my-4">
-
-                <div class="text-center">
-                    <p class="mb-0">Deja un compte ?</p>
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary mt-2">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
-                    </a>
-                </div>
+    <form method="POST" action="{{ url_for('auth.register') }}" class="needs-validation" novalidate>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="first_name" class="form-label">Prenom</label>
+                <input type="text" class="form-control" id="first_name" name="first_name"
+                       placeholder="Votre prenom" required minlength="2">
+                <div class="invalid-feedback">Le prenom est obligatoire (min. 2 caracteres).</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="last_name" class="form-label">Nom</label>
+                <input type="text" class="form-control" id="last_name" name="last_name"
+                       placeholder="Votre nom" required minlength="2">
+                <div class="invalid-feedback">Le nom est obligatoire (min. 2 caracteres).</div>
             </div>
         </div>
+
+        <div class="mb-3">
+            <label for="username" class="form-label">Nom d'utilisateur</label>
+            <input type="text" class="form-control" id="username" name="username"
+                   placeholder="utilisateur" required minlength="3" pattern="[a-zA-Z0-9_]+">
+            <div class="invalid-feedback">Min. 3 caracteres, lettres, chiffres et _ uniquement.</div>
+        </div>
+
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email"
+                   placeholder="votre@email.com" required>
+            <div class="invalid-feedback">Veuillez entrer un email valide.</div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="password" class="form-label">Mot de passe</label>
+                <input type="password" class="form-control" id="password" name="password"
+                       placeholder="Mot de passe" required minlength="8">
+                <div class="invalid-feedback">Min. 8 caracteres requis.</div>
+                <div class="form-text">Min. 8 caracteres, 1 majuscule, 1 chiffre, 1 special</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="password_confirm" class="form-label">Confirmer</label>
+                <input type="password" class="form-control" id="password_confirm" name="password_confirm"
+                       placeholder="Confirmer" required>
+                <div class="invalid-feedback">Veuillez confirmer le mot de passe.</div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Creer mon compte</button>
+    </form>
+
+    <div class="auth-footer">
+        <p>Deja un compte ?</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">Se connecter</a>
     </div>
 </div>
 {% endblock %}

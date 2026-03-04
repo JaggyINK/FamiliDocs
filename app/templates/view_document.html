@@ -13,23 +13,36 @@
     </ol>
 </nav>
 
+{% if document.needs_review %}
+<div class="alert alert-warning mb-3">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Revision requise !</strong> Ce document devait etre revise le {{ document.next_review_date.strftime('%d/%m/%Y') }}.
+    <form method="POST" action="{{ url_for('document.mark_reviewed', document_id=document.id) }}" class="d-inline">
+        <button type="submit" class="btn btn-link alert-link ms-2 p-0">Marquer comme revise</button>
+    </form>
+</div>
+{% elif document.review_soon %}
+<div class="alert alert-info mb-3">
+    <i class="bi bi-calendar-check me-2"></i>
+    Ce document doit etre revise le {{ document.next_review_date.strftime('%d/%m/%Y') }}.
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-md-8">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="bi bi-file-earmark-{{ document.file_type }} me-2"></i>{{ document.name }}
-                </h5>
+                <h5 class="mb-0">{{ document.name }}</h5>
                 <div>
                     {% if can_edit %}
-                    <a href="{{ url_for('document.edit', document_id=document.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <a href="{{ url_for('document.edit', document_id=document.id) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Modifier les informations du document">
                         <i class="bi bi-pencil me-1"></i>Modifier
                     </a>
                     {% endif %}
-                    <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-sm btn-outline-info">
+                    <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Voir l'historique des versions">
                         <i class="bi bi-clock-history me-1"></i>Versions
                     </a>
-                    <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-sm btn-primary">
+                    <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Telecharger le fichier">
                         <i class="bi bi-download me-1"></i>Telecharger
                     </a>
                 </div>
@@ -44,19 +57,21 @@
                     <div class="col-md-6">
                         <table class="table table-sm">
                             <tr>
-                                <th><i class="bi bi-file-earmark me-2"></i>Fichier original</th>
+                                <th>Fichier original</th>
                                 <td>{{ document.original_filename }}</td>
                             </tr>
                             <tr>
-                                <th><i class="bi bi-tag me-2"></i>Type</th>
-                                <td><span class="badge bg-secondary">{{ document.file_type }}</span></td>
+                                <th>Type</th>
+                                <td>
+                                    <span class="badge bg-secondary">{{ document.file_type }}</span>
+                                </td>
                             </tr>
                             <tr>
-                                <th><i class="bi bi-hdd me-2"></i>Taille</th>
+                                <th>Taille</th>
                                 <td>{{ document.get_human_readable_size() }}</td>
                             </tr>
                             <tr>
-                                <th><i class="bi bi-folder me-2"></i>Dossier</th>
+                                <th>Dossier</th>
                                 <td>{{ document.folder.name if document.folder else 'Racine' }}</td>
                             </tr>
                         </table>
@@ -64,7 +79,7 @@
                     <div class="col-md-6">
                         <table class="table table-sm">
                             <tr>
-                                <th><i class="bi bi-shield me-2"></i>Confidentialite</th>
+                                <th>Confidentialite</th>
                                 <td>
                                     {% if document.confidentiality == 'private' %}
                                     <span class="badge bg-danger">Prive</span>
@@ -73,22 +88,37 @@
                                     {% else %}
                                     <span class="badge bg-success">Public</span>
                                     {% endif %}
+                                    {% if document.is_encrypted %}
+                                    <i class="bi bi-lock-fill text-success ms-1" data-bs-toggle="tooltip" title="Document chiffre (AES)"></i>
+                                    {% endif %}
                                 </td>
                             </tr>
                             <tr>
-                                <th><i class="bi bi-calendar-plus me-2"></i>Ajoute le</th>
+                                <th>Ajoute le</th>
                                 <td>{{ document.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                             </tr>
                             <tr>
-                                <th><i class="bi bi-calendar-check me-2"></i>Modifie le</th>
+                                <th>Modifie le</th>
                                 <td>{{ document.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
                             </tr>
                             <tr>
-                                <th><i class="bi bi-calendar-x me-2"></i>Echeance</th>
+                                <th>Echeance</th>
                                 <td>
                                     {% if document.expiry_date %}
                                     <span class="badge bg-{{ 'danger' if document.is_expired else ('warning' if document.is_expiring_soon else 'secondary') }}">
                                         {{ document.expiry_date.strftime('%d/%m/%Y') }}
+                                    </span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Prochaine revision</th>
+                                <td>
+                                    {% if document.next_review_date %}
+                                    <span class="badge bg-{{ 'danger' if document.needs_review else ('warning' if document.review_soon else 'info') }}">
+                                        {{ document.next_review_date.strftime('%d/%m/%Y') }}
                                     </span>
                                     {% else %}
                                     -
@@ -101,30 +131,96 @@
             </div>
         </div>
 
-        <!-- Historique -->
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-clock-history me-2"></i>Historique
-            </div>
-            <div class="card-body">
-                {% if logs %}
-                <div class="list-group list-group-flush">
-                    {% for log in logs %}
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between">
-                            <span>
-                                <i class="bi bi-{{ 'eye' if log.action == 'document_view' else ('download' if log.action == 'document_download' else 'pencil') }} me-2"></i>
-                                {{ log.action_label }}
-                                <small class="text-muted">par {{ log.user.username }}</small>
-                            </span>
-                            <small class="text-muted">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+        <!-- N5 - Historique pliable avec accordeon -->
+        <div class="accordion" id="historyAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="historyHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#historyCollapse" aria-expanded="false" aria-controls="historyCollapse">
+                        <i class="bi bi-clock-history me-2"></i>Historique d'activite
+                        <span class="badge bg-secondary ms-2">{{ logs|length if logs else 0 }}</span>
+                    </button>
+                </h2>
+                <div id="historyCollapse" class="accordion-collapse collapse" aria-labelledby="historyHeading"
+                     data-bs-parent="#historyAccordion">
+                    <div class="accordion-body p-0">
+                        {% if logs %}
+                        <div class="list-group list-group-flush">
+                            {% for log in logs %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>
+                                        {% if log.action == 'document_view' %}
+                                        <i class="bi bi-eye text-info me-2"></i>
+                                        {% elif log.action == 'document_download' %}
+                                        <i class="bi bi-download text-success me-2"></i>
+                                        {% elif log.action == 'document_upload' %}
+                                        <i class="bi bi-upload text-primary me-2"></i>
+                                        {% elif log.action == 'document_edit' %}
+                                        <i class="bi bi-pencil text-warning me-2"></i>
+                                        {% elif log.action == 'document_share' %}
+                                        <i class="bi bi-share text-secondary me-2"></i>
+                                        {% else %}
+                                        <i class="bi bi-activity me-2"></i>
+                                        {% endif %}
+                                        {{ log.action_label }}
+                                        <small class="text-muted">par {{ log.user.username }}</small>
+                                    </span>
+                                    <small class="text-muted">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                {% if log.details %}
+                                <small class="text-muted d-block mt-1">{{ log.details }}</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
                         </div>
+                        {% else %}
+                        <p class="text-muted mb-0 p-3">Aucun historique</p>
+                        {% endif %}
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
-                <p class="text-muted mb-0">Aucun historique</p>
-                {% endif %}
+            </div>
+
+            <!-- Section Versions aussi pliable -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="versionsHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#versionsCollapse" aria-expanded="false" aria-controls="versionsCollapse">
+                        <i class="bi bi-layers me-2"></i>Versions du document
+                        <span class="badge bg-secondary ms-2">{{ document.versions.count() }}</span>
+                    </button>
+                </h2>
+                <div id="versionsCollapse" class="accordion-collapse collapse" aria-labelledby="versionsHeading"
+                     data-bs-parent="#historyAccordion">
+                    <div class="accordion-body p-0">
+                        {% if document.versions.count() > 0 %}
+                        <div class="list-group list-group-flush">
+                            {% for version in document.versions.limit(5).all() %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="bi bi-file-earmark me-2"></i>
+                                    Version {{ version.version_number }}
+                                    <small class="text-muted">{{ version.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </span>
+                                <a href="{{ url_for('version.download_version', document_id=document.id, version_id=version.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if document.versions.count() > 5 %}
+                        <div class="text-center p-2">
+                            <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-sm btn-link">
+                                Voir toutes les versions
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-muted mb-0 p-3">Aucune version precedente</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -132,24 +228,29 @@
     <div class="col-md-4">
         <!-- Actions -->
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="bi bi-lightning me-2"></i>Actions
-            </div>
+            <div class="card-header">Actions</div>
             <div class="card-body d-grid gap-2">
-                <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-primary">
+                <a href="{{ url_for('document.download', document_id=document.id) }}" class="btn btn-primary" data-bs-toggle="tooltip" title="Telecharger le fichier">
                     <i class="bi bi-download me-2"></i>Telecharger
                 </a>
-                <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-outline-info">
+                <a href="{{ url_for('version.list_versions', document_id=document.id) }}" class="btn btn-outline-info" data-bs-toggle="tooltip" title="Voir toutes les versions du document">
                     <i class="bi bi-clock-history me-2"></i>Historique versions
                 </a>
                 {% if document.owner_id == current_user.id %}
-                <a href="{{ url_for('document.share', document_id=document.id) }}" class="btn btn-outline-info">
+                <a href="{{ url_for('document.share', document_id=document.id) }}" class="btn btn-outline-info" data-bs-toggle="tooltip" title="Partager avec d'autres utilisateurs">
                     <i class="bi bi-share me-2"></i>Partager
                 </a>
                 {% if can_edit %}
-                <a href="{{ url_for('document.edit', document_id=document.id) }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('document.edit', document_id=document.id) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="Modifier les informations">
                     <i class="bi bi-pencil me-2"></i>Modifier
                 </a>
+                {% endif %}
+                {% if document.next_review_date %}
+                <form method="POST" action="{{ url_for('document.mark_reviewed', document_id=document.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-outline-success" data-bs-toggle="tooltip" title="Marquer le document comme revise">
+                        <i class="bi bi-check2-circle me-2"></i>Marquer revise
+                    </button>
+                </form>
                 {% endif %}
                 <form method="POST" action="{{ url_for('document.delete', document_id=document.id) }}"
                       onsubmit="return confirm('Etes-vous sur de vouloir supprimer ce document ?');">
@@ -161,15 +262,12 @@
             </div>
         </div>
 
-        <!-- Partages -->
         <!-- Tags -->
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="bi bi-tags me-2"></i>Tags
-            </div>
+            <div class="card-header">Tags</div>
             <div class="card-body">
                 {% for tag in document.tags %}
-                <span class="badge me-1 mb-1" style="background-color: {{ tag.color }};">
+                <span class="badge me-1 mb-1" style="background-color: {{ tag.color|e }};">
                     {{ tag.name }}
                     {% if document.owner_id == current_user.id %}
                     <form method="POST" action="{{ url_for('search.remove_tag_from_document', document_id=document.id, tag_id=tag.id) }}" class="d-inline">
@@ -198,9 +296,7 @@
 
         {% if permissions and document.owner_id == current_user.id %}
         <div class="card">
-            <div class="card-header">
-                <i class="bi bi-people me-2"></i>Partage avec
-            </div>
+            <div class="card-header">Partage avec</div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     {% for perm in permissions %}
@@ -214,6 +310,18 @@
                     </li>
                     {% endfor %}
                 </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Derniere revision -->
+        {% if document.last_reviewed_at %}
+        <div class="card mt-3">
+            <div class="card-body text-center">
+                <small class="text-muted">
+                    <i class="bi bi-check-circle text-success me-1"></i>
+                    Derniere revision: {{ document.last_reviewed_at.strftime('%d/%m/%Y a %H:%M') }}
+                </small>
             </div>
         </div>
         {% endif %}

@@ -21,27 +21,35 @@ def list_tasks():
     status = request.args.get('status', '')
     priority = request.args.get('priority', '')
 
-    query = Task.query.filter_by(owner_id=current_user.id)
+    page = request.args.get('page', 1, type=int)
+
+    query = Task.query.filter(
+        db.or_(Task.owner_id == current_user.id, Task.assigned_to_id == current_user.id)
+    )
 
     if status:
         query = query.filter_by(status=status)
     if priority:
         query = query.filter_by(priority=priority)
 
-    tasks = query.order_by(Task.due_date).all()
+    pagination = query.order_by(Task.due_date).paginate(page=page, per_page=20, error_out=False)
 
-    # Statistiques
+    # Statistiques (inclut les taches assignees)
+    user_tasks = Task.query.filter(
+        db.or_(Task.owner_id == current_user.id, Task.assigned_to_id == current_user.id)
+    )
     stats = {
-        'total': Task.query.filter_by(owner_id=current_user.id).count(),
-        'pending': Task.query.filter_by(owner_id=current_user.id, status='pending').count(),
-        'in_progress': Task.query.filter_by(owner_id=current_user.id, status='in_progress').count(),
-        'completed': Task.query.filter_by(owner_id=current_user.id, status='completed').count(),
+        'total': user_tasks.count(),
+        'pending': user_tasks.filter(Task.status == 'pending').count(),
+        'in_progress': user_tasks.filter(Task.status == 'in_progress').count(),
+        'completed': user_tasks.filter(Task.status == 'completed').count(),
         'overdue': len(Task.get_overdue_tasks(current_user.id))
     }
 
     return render_template(
         'tasks.html',
-        tasks=tasks,
+        tasks=pagination.items,
+        pagination=pagination,
         stats=stats,
         selected_status=status,
         selected_priority=priority
@@ -94,21 +102,34 @@ def create():
         priority = request.form.get('priority', 'normal')
         document_id = request.form.get('document_id', type=int)
         reminder_days = request.form.get('reminder_days', 7, type=int)
+        assigned_to_id = request.form.get('assigned_to_id', type=int)
+
+        # Validation des valeurs
+        if priority not in ('low', 'normal', 'high', 'urgent'):
+            priority = 'normal'
+        if reminder_days < 1 or reminder_days > 365:
+            reminder_days = 7
 
         # Validation
         if not title:
             flash('Le titre est obligatoire.', 'warning')
-            return redirect(url_for('task.create'))
+            documents = Document.query.filter_by(owner_id=current_user.id).order_by(Document.name).all()
+            family_members = Task.get_family_members_for_assignment(current_user.id)
+            return render_template('create_task.html', documents=documents, family_members=family_members, form_data=request.form)
 
         if not due_date_str:
-            flash('La date d\'échéance est obligatoire.', 'warning')
-            return redirect(url_for('task.create'))
+            flash('La date d\'echeance est obligatoire.', 'warning')
+            documents = Document.query.filter_by(owner_id=current_user.id).order_by(Document.name).all()
+            family_members = Task.get_family_members_for_assignment(current_user.id)
+            return render_template('create_task.html', documents=documents, family_members=family_members, form_data=request.form)
 
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
         except ValueError:
             flash('Format de date invalide.', 'warning')
-            return redirect(url_for('task.create'))
+            documents = Document.query.filter_by(owner_id=current_user.id).order_by(Document.name).all()
+            family_members = Task.get_family_members_for_assignment(current_user.id)
+            return render_template('create_task.html', documents=documents, family_members=family_members, form_data=request.form)
 
         # Vérifier le document si spécifié
         if document_id:
@@ -124,16 +145,25 @@ def create():
             priority=priority,
             owner_id=current_user.id,
             document_id=document_id if document_id else None,
-            reminder_days=reminder_days
+            reminder_days=reminder_days,
+            assigned_to_id=assigned_to_id if assigned_to_id else None
         )
 
         db.session.add(task)
         db.session.commit()
 
+        # T10 - Notification si assignée à quelqu'un d'autre
+        if assigned_to_id and assigned_to_id != current_user.id:
+            from app.services.notification_service import NotificationService
+            try:
+                NotificationService.notify_task_assigned(task, current_user)
+            except Exception:
+                pass
+
         Log.create_log(
             user_id=current_user.id,
             action='task_create',
-            details=f"Tâche '{title}' créée"
+            details=f"Tâche '{title}' créée" + (f" et assignée" if assigned_to_id else "")
         )
         db.session.commit()
 
@@ -143,7 +173,10 @@ def create():
     # Documents pour lier à la tâche
     documents = Document.query.filter_by(owner_id=current_user.id).order_by(Document.name).all()
 
-    return render_template('create_task.html', documents=documents)
+    # Membres de famille pour l'assignation
+    family_members = Task.get_family_members_for_assignment(current_user.id)
+
+    return render_template('create_task.html', documents=documents, family_members=family_members)
 
 
 @task_bp.route('/<int:task_id>')
@@ -152,7 +185,7 @@ def view(task_id):
     """Affiche les détails d'une tâche"""
     task = Task.query.get_or_404(task_id)
 
-    if task.owner_id != current_user.id and not current_user.is_admin():
+    if task.owner_id != current_user.id and task.assigned_to_id != current_user.id and not current_user.is_admin():
         flash('Vous n\'avez pas accès à cette tâche.', 'danger')
         return redirect(url_for('task.list_tasks'))
 
@@ -165,15 +198,17 @@ def edit(task_id):
     """Modification d'une tâche"""
     task = Task.query.get_or_404(task_id)
 
-    if task.owner_id != current_user.id and not current_user.is_admin():
+    if task.owner_id != current_user.id and task.assigned_to_id != current_user.id and not current_user.is_admin():
         flash('Vous n\'avez pas le droit de modifier cette tâche.', 'danger')
         return redirect(url_for('task.list_tasks'))
 
     if request.method == 'POST':
         task.title = request.form.get('title', '').strip()
         task.description = request.form.get('description', '').strip()
-        task.priority = request.form.get('priority', 'normal')
-        task.reminder_days = request.form.get('reminder_days', 7, type=int)
+        priority = request.form.get('priority', 'normal')
+        task.priority = priority if priority in ('low', 'normal', 'high', 'urgent') else 'normal'
+        reminder_days = request.form.get('reminder_days', 7, type=int)
+        task.reminder_days = max(1, min(365, reminder_days))
 
         due_date_str = request.form.get('due_date', '').strip()
         if due_date_str:
@@ -209,7 +244,7 @@ def change_status(task_id, status):
     """Change le statut d'une tâche"""
     task = Task.query.get_or_404(task_id)
 
-    if task.owner_id != current_user.id and not current_user.is_admin():
+    if task.owner_id != current_user.id and task.assigned_to_id != current_user.id and not current_user.is_admin():
         flash('Vous n\'avez pas le droit de modifier cette tâche.', 'danger')
         return redirect(url_for('task.list_tasks'))
 

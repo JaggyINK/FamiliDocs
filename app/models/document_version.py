@@ -27,9 +27,10 @@ class DocumentVersion(db.Model):
     # Dates
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
-    # Relations
+    # Relations - cascade delete pour supprimer les versions quand le document est supprime
     document = db.relationship('Document', backref=db.backref(
-        'versions', lazy='dynamic', order_by='DocumentVersion.version_number.desc()'
+        'versions', lazy='dynamic', order_by='DocumentVersion.version_number.desc()',
+        cascade='all, delete-orphan'
     ))
     uploader = db.relationship('User', backref=db.backref('uploaded_versions', lazy='dynamic'))
 

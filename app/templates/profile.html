@@ -4,63 +4,207 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-person me-2"></i>Mon Profil
+    <div class="col-md-10">
+        <div class="row">
+            <!-- Photo de profil -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header">Photo de profil</div>
+                    <div class="card-body text-center">
+                        <!-- Affichage avatar actuel -->
+                        {% if current_user.profile_photo %}
+                        <img src="{{ url_for('user.avatar', filename=current_user.profile_photo) }}"
+                             alt="Photo de profil" class="rounded-circle mb-3"
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3"
+                             style="width: 150px; height: 150px; font-size: 3rem;">
+                            {{ current_user.initials }}
+                        </div>
+                        {% endif %}
+
+                        <p class="mb-3">
+                            <strong>{{ current_user.display_name }}</strong>
+                            <br>
+                            <small class="text-muted">@{{ current_user.username }}</small>
+                        </p>
+
+                        <!-- Formulaire upload photo -->
+                        <form method="POST" action="{{ url_for('user.upload_avatar') }}" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <input type="file" class="form-control form-control-sm" name="avatar"
+                                       accept="image/jpeg,image/png,image/gif" id="avatar-input">
+                                <div class="form-text">JPG, PNG ou GIF. Max 2 Mo.</div>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="bi bi-upload me-1"></i>Changer la photo
+                            </button>
+                        </form>
+
+                        {% if current_user.profile_photo %}
+                        <form method="POST" action="{{ url_for('user.delete_avatar') }}" class="mt-2">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                                    onclick="return confirm('Supprimer votre photo de profil ?');">
+                                <i class="bi bi-trash me-1"></i>Supprimer la photo
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Stats rapides -->
+                <div class="card mt-3">
+                    <div class="card-header">Statistiques</div>
+                    <div class="card-body">
+                        <table class="table table-sm mb-0">
+                            <tr>
+                                <td>Documents</td>
+                                <td class="text-end"><strong>{{ current_user.documents.count() }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Dossiers</td>
+                                <td class="text-end"><strong>{{ current_user.folders.count() }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Taches</td>
+                                <td class="text-end"><strong>{{ current_user.tasks.count() }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Familles</td>
+                                <td class="text-end"><strong>{{ current_user.family_memberships.count() }}</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('user.profile') }}">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="first_name" class="form-label">Prenom <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="first_name" name="first_name"
-                                   value="{{ current_user.first_name }}" required>
-                        </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label for="last_name" class="form-label">Nom <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="last_name" name="last_name"
-                                   value="{{ current_user.last_name }}" required>
-                        </div>
+            <!-- Informations du profil -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">Informations personnelles</div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('user.profile') }}">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label">Prenom <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name"
+                                           value="{{ current_user.first_name }}" required>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label">Nom <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name"
+                                           value="{{ current_user.last_name }}" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email"
+                                       value="{{ current_user.email }}" required>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="username" class="form-label">Nom d'utilisateur</label>
+                                    <input type="text" class="form-control" id="username" value="{{ current_user.username }}" disabled>
+                                    <div class="form-text">Le nom d'utilisateur ne peut pas etre modifie.</div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="family_title" class="form-label">Titre familial</label>
+                                    <select class="form-select" id="family_title" name="family_title">
+                                        {% for value, label in family_titles %}
+                                        <option value="{{ value }}" {% if current_user.family_title == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Affiche a cote de votre nom dans les familles.</div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="role" class="form-label">Role systeme</label>
+                                    <input type="text" class="form-control" id="role"
+                                           value="{% if current_user.is_admin() %}Administrateur{% else %}Utilisateur{% endif %}" disabled>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="created_at" class="form-label">Membre depuis</label>
+                                    <input type="text" class="form-control" id="created_at"
+                                           value="{{ current_user.created_at.strftime('%d/%m/%Y') }}" disabled>
+                                </div>
+                            </div>
+
+                            {% if current_user.last_login %}
+                            <div class="mb-3">
+                                <label class="form-label">Derniere connexion</label>
+                                <input type="text" class="form-control"
+                                       value="{{ current_user.last_login.strftime('%d/%m/%Y a %H:%M') }}" disabled>
+                            </div>
+                            {% endif %}
+
+                            <hr>
+
+                            <div class="d-flex justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-key me-2"></i>Changer le mot de passe
+                                    </a>
+                                    <a href="{{ url_for('user.export_data') }}" class="btn btn-outline-info" data-bs-toggle="tooltip" title="Export RGPD de vos donnees">
+                                        <i class="bi bi-download me-2"></i>Exporter mes donnees
+                                    </a>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg me-2"></i>Enregistrer
+                                </button>
+                            </div>
+                        </form>
                     </div>
+                </div>
 
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                        <input type="email" class="form-control" id="email" name="email"
-                               value="{{ current_user.email }}" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Nom d'utilisateur</label>
-                        <input type="text" class="form-control" id="username" value="{{ current_user.username }}" disabled>
-                        <div class="form-text">Le nom d'utilisateur ne peut pas etre modifie.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="role" class="form-label">Role</label>
-                        <input type="text" class="form-control" id="role" value="{{ current_user.role }}" disabled>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="created_at" class="form-label">Membre depuis</label>
-                        <input type="text" class="form-control" id="created_at"
-                               value="{{ current_user.created_at.strftime('%d/%m/%Y') }}" disabled>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-key me-2"></i>Changer le mot de passe
+                <!-- Familles -->
+                {% if current_user.family_memberships.count() > 0 %}
+                <div class="card mt-3">
+                    <div class="card-header">Mes familles</div>
+                    <div class="list-group list-group-flush">
+                        {% for membership in current_user.family_memberships.all() %}
+                        <a href="{{ url_for('family.view_family', family_id=membership.family_id) }}"
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <span>{{ membership.family.name }}</span>
+                            <span class="badge bg-secondary">{{ membership.role }}</span>
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-2"></i>Enregistrer
-                        </button>
+                        {% endfor %}
                     </div>
-                </form>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Preview de l'image selectionnee
+    document.getElementById('avatar-input').addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            // Verifier le type (images uniquement)
+            var allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (allowedTypes.indexOf(this.files[0].type) === -1) {
+                alert('Format non supporte. Utilisez JPG, PNG ou GIF.');
+                this.value = '';
+                return;
+            }
+            // Verifier la taille (max 2 Mo)
+            if (this.files[0].size > 2 * 1024 * 1024) {
+                alert('Le fichier est trop volumineux (max 2 Mo)');
+                this.value = '';
+                return;
+            }
+        }
+    });
+</script>
 {% endblock %}

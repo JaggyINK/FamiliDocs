@@ -44,7 +44,7 @@ class Family(db.Model):
         if self.creator_id == user_id:
             return True
         member = self.members.filter_by(user_id=user_id).first()
-        return member and member.role in ('admin', 'gestionnaire')
+        return member and member.role in FamilyMember.MANAGER_ROLES
 
 
 class FamilyMember(db.Model):
@@ -69,14 +69,20 @@ class FamilyMember(db.Model):
         db.UniqueConstraint('family_id', 'user_id', name='uq_family_member'),
     )
 
-    # Roles disponibles
+    # Roles disponibles (etendu avec roles familiaux)
     ROLES = {
+        'chef_famille': 'Chef de famille - Administration complete (max 2)',
         'admin': 'Administrateur - Gestion complete',
+        'parent': 'Parent - Gestion documents et taches',
         'gestionnaire': 'Gestionnaire - Ajout/suppression de documents',
+        'enfant': 'Enfant - Acces limite supervise',
         'editeur': 'Editeur - Modification des documents partages',
         'lecteur': 'Lecteur - Consultation uniquement',
         'invite': 'Invite - Acces temporaire limite'
     }
+
+    # Roles qui peuvent gerer
+    MANAGER_ROLES = ('chef_famille', 'admin', 'parent', 'gestionnaire')
 
     def __repr__(self):
         return f'<FamilyMember family={self.family_id} user={self.user_id} role={self.role}>'

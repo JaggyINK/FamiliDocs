@@ -45,11 +45,13 @@ def advanced_search():
 
     # Lancer la recherche si des criteres sont fournis
     documents = []
+    pagination = None
     has_searched = False
+    page = request.args.get('page', 1, type=int)
 
     if query or file_type or folder_id or tag_ids or date_from or date_to or confidentiality:
         has_searched = True
-        documents = SearchService.search_documents(
+        search_query = SearchService.search_documents_query(
             user_id=current_user.id,
             query=query,
             file_type=file_type,
@@ -61,6 +63,22 @@ def advanced_search():
             sort_by=sort_by,
             sort_order=sort_order
         )
+        if search_query is not None:
+            pagination = search_query.paginate(page=page, per_page=20, error_out=False)
+            documents = pagination.items
+        else:
+            documents = SearchService.search_documents(
+                user_id=current_user.id,
+                query=query,
+                file_type=file_type,
+                folder_id=folder_id,
+                tags=tag_ids if tag_ids else None,
+                date_from=date_from,
+                date_to=date_to,
+                confidentiality=confidentiality,
+                sort_by=sort_by,
+                sort_order=sort_order
+            )
 
     # Donnees pour les filtres
     folders = Folder.query.filter_by(owner_id=current_user.id).all()
@@ -69,6 +87,7 @@ def advanced_search():
     return render_template(
         'search.html',
         documents=documents,
+        pagination=pagination,
         has_searched=has_searched,
         query=query,
         file_type=file_type,
@@ -81,7 +100,7 @@ def advanced_search():
         sort_order=sort_order,
         folders=folders,
         tags=tags,
-        result_count=len(documents)
+        result_count=pagination.total if pagination else len(documents)
     )
 
 
@@ -96,30 +115,39 @@ def global_search():
 
     results = SearchService.global_search(current_user.id, query)
 
+    # Construire la liste de documents pour la reponse JSON
+    documents_list = []
+    for d in results['documents']:
+        documents_list.append({
+            'id': d.id,
+            'name': d.name,
+            'type': d.file_type,
+            'url': url_for('document.view', document_id=d.id)
+        })
+
+    # Construire la liste de taches
+    tasks_list = []
+    for t in results['tasks']:
+        tasks_list.append({
+            'id': t.id,
+            'title': t.title,
+            'status': t.status,
+            'url': url_for('task.view', task_id=t.id)
+        })
+
+    # Construire la liste de tags
+    tags_list = []
+    for t in results['tags']:
+        tags_list.append({
+            'id': t.id,
+            'name': t.name,
+            'color': t.color
+        })
+
     return jsonify({
-        'documents': [
-            {
-                'id': d.id,
-                'name': d.name,
-                'type': d.file_type,
-                'url': url_for('document.view', document_id=d.id)
-            } for d in results['documents']
-        ],
-        'tasks': [
-            {
-                'id': t.id,
-                'title': t.title,
-                'status': t.status,
-                'url': url_for('task.view', task_id=t.id)
-            } for t in results['tasks']
-        ],
-        'tags': [
-            {
-                'id': t.id,
-                'name': t.name,
-                'color': t.color
-            } for t in results['tags']
-        ]
+        'documents': documents_list,
+        'tasks': tasks_list,
+        'tags': tags_list
     })
 
 
@@ -129,8 +157,10 @@ def global_search():
 @login_required
 def list_tags():
     """Liste tous les tags de l'utilisateur"""
-    tags = Tag.get_user_tags(current_user.id)
-    return render_template('tags.html', tags=tags)
+    page = request.args.get('page', 1, type=int)
+    pagination = Tag.query.filter_by(owner_id=current_user.id)\
+        .order_by(Tag.name).paginate(page=page, per_page=20, error_out=False)
+    return render_template('tags.html', tags=pagination.items, pagination=pagination)
 
 
 @search_bp.route('/tags/create', methods=['POST'])

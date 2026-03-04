@@ -4,11 +4,14 @@ FamiliDocs v2.0 - Amelioration BTS SIO SLAM
 """
 from datetime import datetime, timedelta
 import json
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from app.models import db
+
+logger = logging.getLogger(__name__)
 from app.models.notification import Notification
 from app.models.task import Task
 from app.models.document import Document
@@ -180,6 +183,22 @@ class NotificationService:
         return notification
 
     @staticmethod
+    def notify_task_assigned(task, assigned_by_user):
+        """Cree une notification pour une tache assignee a un utilisateur"""
+        notification = Notification.create_notification(
+            user_id=task.assigned_to_id,
+            type='task_assigned',
+            title=f"Nouvelle tache assignee : {task.title}",
+            message=f"{assigned_by_user.full_name} vous a assigne la tache '{task.title}' a faire avant le {task.due_date.strftime('%d/%m/%Y')}.",
+            priority='normal',
+            task_id=task.id,
+            extra_data=json.dumps({'assigned_by': assigned_by_user.id})
+        )
+
+        db.session.commit()
+        return notification
+
+    @staticmethod
     def notify_welcome(user):
         """Cree une notification de bienvenue pour un nouvel utilisateur"""
         notification = Notification.create_notification(
@@ -317,7 +336,7 @@ class NotificationService:
         """
         if not NotificationService.EMAIL_ENABLED:
             # Mode simulation - log seulement
-            print(f"[EMAIL SIMULE] To: {to_email}, Subject: {subject}")
+            logger.info(f"[EMAIL SIMULE] To: {to_email}, Subject: {subject}")
             return True
 
         try:
@@ -354,7 +373,7 @@ class NotificationService:
             return True
 
         except Exception as e:
-            print(f"Erreur envoi email: {str(e)}")
+            logger.error(f"Erreur envoi email: {str(e)}")
             return False
 
     @staticmethod

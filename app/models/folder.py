@@ -35,7 +35,11 @@ class Folder(db.Model):
     @property
     def total_size(self):
         """Retourne la taille totale des documents du dossier"""
-        return sum(doc.file_size or 0 for doc in self.documents)
+        total = 0
+        for doc in self.documents:
+            if doc.file_size:
+                total = total + doc.file_size
+        return total
 
     def get_path(self):
         """Retourne le chemin complet du dossier"""

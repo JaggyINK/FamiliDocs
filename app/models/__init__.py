@@ -15,3 +15,4 @@ from .notification import Notification
 from .document_version import DocumentVersion
 from .tag import Tag, document_tags
 from .family import Family, FamilyMember, ShareLink
+from .message import Message

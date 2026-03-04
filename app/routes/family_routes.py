@@ -1,7 +1,7 @@
 """
 Routes de gestion des familles virtuelles et liens de partage securises
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_required, current_user
 
 from app.models import db
@@ -15,6 +15,49 @@ from app.services.notification_service import NotificationService
 family_bp = Blueprint('family', __name__)
 
 
+# --- Route d'invitation smart (accessible sans connexion) ---
+
+@family_bp.route('/join/<token>')
+def join_family(token):
+    """
+    Route d'invitation smart - F6
+    Redirige vers login ou register selon l'état de connexion
+    """
+    link = ShareLink.query.filter_by(token=token).first()
+
+    if not link:
+        flash("Lien d'invitation invalide ou expiré.", 'danger')
+        return redirect(url_for('auth.login'))
+
+    if not link.is_valid:
+        flash("Ce lien a expiré ou a atteint sa limite d'utilisation.", 'warning')
+        return redirect(url_for('auth.login'))
+
+    if not link.family_id:
+        flash("Lien invalide.", 'danger')
+        return redirect(url_for('auth.login'))
+
+    family = Family.query.get(link.family_id)
+    if not family:
+        flash("Groupe introuvable.", 'danger')
+        return redirect(url_for('auth.login'))
+
+    # Si l'utilisateur est connecté, traiter directement l'invitation
+    if current_user.is_authenticated:
+        return redirect(url_for('family.accept_invite', token=token))
+
+    # Stocker le token en session pour après login/register
+    session['pending_invite_token'] = token
+
+    # Afficher la page de choix login/register avec infos famille
+    return render_template(
+        'join_family.html',
+        family=family,
+        link=link,
+        role_name=FamilyMember.ROLES.get(link.granted_role, 'Membre')
+    )
+
+
 # --- Gestion des familles ---
 
 @family_bp.route('/families')
@@ -26,7 +69,10 @@ def list_families():
 
     # Familles dont l'utilisateur est membre
     memberships = FamilyMember.query.filter_by(user_id=current_user.id).all()
-    member_families = [m.family for m in memberships if m.family.creator_id != current_user.id]
+    member_families = []
+    for m in memberships:
+        if m.family.creator_id != current_user.id:
+            member_families.append(m.family)
 
     return render_template(
         'families.html',
@@ -96,7 +142,11 @@ def view_family(family_id):
             ShareLink.is_revoked == False
         ).all()
         # Filtrer les expires
-        invite_links = [l for l in invite_links if l.is_valid]
+        valid_links = []
+        for link in invite_links:
+            if link.is_valid:
+                valid_links.append(link)
+        invite_links = valid_links
 
     return render_template(
         'view_family.html',
@@ -164,6 +214,25 @@ def change_member_role(family_id, member_id):
         return redirect(url_for('family.view_family', family_id=family_id))
 
     new_role = request.form.get('role', 'lecteur')
+    current_member = FamilyMember.query.filter_by(
+        family_id=family_id, user_id=current_user.id
+    ).first()
+
+    # RESTRICTION: Un gestionnaire ne peut pas promouvoir en admin ou chef_famille
+    if current_member and current_member.role == 'gestionnaire':
+        if new_role in ('admin', 'chef_famille'):
+            flash("Un gestionnaire ne peut pas promouvoir quelqu'un en admin ou chef de famille.", 'warning')
+            return redirect(url_for('family.view_family', family_id=family_id))
+
+    # RESTRICTION: Limite de 2 chefs de famille max
+    if new_role == 'chef_famille':
+        chefs_count = FamilyMember.query.filter_by(
+            family_id=family_id, role='chef_famille'
+        ).count()
+        if chefs_count >= 2:
+            flash("Il ne peut y avoir que 2 chefs de famille maximum.", 'warning')
+            return redirect(url_for('family.view_family', family_id=family_id))
+
     if new_role in FamilyMember.ROLES:
         member.role = new_role
         db.session.commit()
@@ -175,13 +244,10 @@ def change_member_role(family_id, member_id):
 @family_bp.route('/families/<int:family_id>/members/<int:member_id>/remove', methods=['POST'])
 @login_required
 def remove_member(family_id, member_id):
-    """Retire un membre du groupe"""
+    """Retire un membre du groupe + revoque ses acces aux documents"""
+    from app.services.permission_service import PermissionService
+
     family = Family.query.get_or_404(family_id)
-
-    if not family.can_manage(current_user.id):
-        flash("Vous n'avez pas le droit de retirer des membres.", 'danger')
-        return redirect(url_for('family.view_family', family_id=family_id))
-
     member = FamilyMember.query.get_or_404(member_id)
 
     # On ne peut pas retirer le createur
@@ -189,11 +255,35 @@ def remove_member(family_id, member_id):
         flash('Impossible de retirer le createur du groupe.', 'warning')
         return redirect(url_for('family.view_family', family_id=family_id))
 
+    # Verification des droits d'abord
+    if not family.can_manage(current_user.id):
+        flash("Vous n'avez pas le droit de retirer des membres.", 'danger')
+        return redirect(url_for('family.view_family', family_id=family_id))
+
+    # RESTRICTION: Un gestionnaire ne peut retirer que les invites et lecteurs
+    current_member = FamilyMember.query.filter_by(
+        family_id=family_id, user_id=current_user.id
+    ).first()
+
+    if current_member and current_member.role == 'gestionnaire':
+        if member.role not in ('invite', 'lecteur'):
+            flash("Un gestionnaire ne peut retirer que les invites et lecteurs.", 'warning')
+            return redirect(url_for('family.view_family', family_id=family_id))
+
     user = User.query.get(member.user_id)
+    if not user:
+        flash("Utilisateur introuvable.", 'danger')
+        return redirect(url_for('family.view_family', family_id=family_id))
+
+    user_name = user.full_name
+
+    # REVOCATION AUTO: Supprimer tous les acces aux documents partages par les membres de la famille
+    revoked_count = PermissionService.revoke_all_permissions_for_user(member.user_id)
+
     db.session.delete(member)
     db.session.commit()
 
-    flash(f'{user.full_name} a ete retire du groupe.', 'success')
+    flash(f'{user_name} a ete retire du groupe. {revoked_count} acces revoque(s).', 'success')
     return redirect(url_for('family.view_family', family_id=family_id))
 
 

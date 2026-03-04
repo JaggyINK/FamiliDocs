@@ -5,22 +5,62 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a9e790e7-4773-4d23-949c-c04b2b509f52" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/FamiliDocs.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/FamiliDocs.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/img.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tableau.xlsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/SUIVI_AMELIORATIONS.md" beforeDir="false" afterPath="$PROJECT_DIR$/SUIVI_AMELIORATIONS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/config/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/database/familidocs.db" beforeDir="false" afterPath="$PROJECT_DIR$/app/database/familidocs.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/document.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/document.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/document_version.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/document_version.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/family.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/family.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/folder.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/folder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/log.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/log.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/notification.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/notification.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/permission.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/permission.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/task.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/task.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/user.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/admin_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/admin_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/auth_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/auth_routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/routes/document_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/document_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/family_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/family_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/notification_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/notification_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/search_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/search_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/task_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/task_routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/routes/user_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/user_routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/auth_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/auth_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/routes/version_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routes/version_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/backup_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/backup_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/services/document_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/document_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/encryption_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/encryption_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/notification_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/notification_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/permission_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/permission_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/search_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/search_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/css/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/js/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/js/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/activity.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/activity.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/admin/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin/dashboard.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/base.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/templates/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/documents.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/documents.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/families.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/families.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/folders.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/folders.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/register.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/register.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/search.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/search.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/share_document.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/share_document.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/tags.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/tags.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/tasks.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/tasks.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/templates/view_document.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/view_document.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/view_family.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/view_family.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/documentation_technique.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/documentation_technique.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/schema_bdd.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/schema_bdd.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/tableau_E5.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/tableau_E5.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,6 +106,7 @@
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/SMIR/PycharmProjects/FamiliDocs&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -76,10 +117,14 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\SMIR\PycharmProjects\FamiliDocs" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.30387.127" />
         <option value="bundled-python-sdk-3944b0c99280-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.30387.127" />
       </set>
     </attachedChunks>
@@ -98,6 +143,16 @@
       <workItem from="1769611084651" duration="47000" />
       <workItem from="1769696542017" duration="5001000" />
       <workItem from="1770025693206" duration="68000" />
+      <workItem from="1770221183420" duration="191000" />
+      <workItem from="1770625419539" duration="12130000" />
+      <workItem from="1770884434553" duration="123000" />
+      <workItem from="1771238630730" duration="180000" />
+      <workItem from="1771238832403" duration="37000" />
+      <workItem from="1771245890923" duration="633000" />
+      <workItem from="1771514561564" duration="617000" />
+      <workItem from="1771580212118" duration="6968000" />
+      <workItem from="1771709580703" duration="12730000" />
+      <workItem from="1771727369040" duration="97000" />
     </task>
     <servers />
   </component>

@@ -1,8 +1,27 @@
 """
 Modèle Log - Journalisation des actions
 """
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 from . import db
+
+logger = logging.getLogger(__name__)
+
+# ============================================================================
+# RGPD / CNIL - Duree de conservation des logs
+# ============================================================================
+# Configurable via variable d'environnement, 7 jours par defaut (dev), 180 en production
+import os
+LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '7'))
+
+# --- PRODUCTION : decommenter la ligne ci-dessous et commenter celle du dessus ---
+# Normes RGPD/CNIL :
+# - Logs de connexion (login/logout/login_failed) : 6 mois (art. L34-1 CPCE)
+# - Logs d'activite utilisateur (document_*, task_*, folder_*) : 12 mois max
+# - Logs d'administration (user_*, permission_*, backup_*) : 12 mois max
+# En production, utiliser la valeur la plus courte necessaire :
+# LOG_RETENTION_DAYS = 180  # 6 mois (CNIL recommandation standard)
+# ============================================================================
 
 
 class Log(db.Model):
@@ -11,14 +30,14 @@ class Log(db.Model):
     __tablename__ = 'logs'
 
     id = db.Column(db.Integer, primary_key=True)
-    action = db.Column(db.String(50), nullable=False)
+    action = db.Column(db.String(50), nullable=False, index=True)
     details = db.Column(db.Text)
     ip_address = db.Column(db.String(45))  # Support IPv6
     user_agent = db.Column(db.String(255))
 
     # Relations
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=True, index=True)
 
     # Timestamp
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -46,7 +65,8 @@ class Log(db.Model):
         'task_edit': 'Modification tâche',
         'task_complete': 'Tâche terminée',
         'backup_create': 'Sauvegarde créée',
-        'backup_restore': 'Restauration effectuée'
+        'backup_restore': 'Restauration effectuée',
+        'document_review': 'Révision document'
     }
 
     def __repr__(self):
@@ -110,3 +130,18 @@ class Log(db.Model):
             Log.created_at >= start_date,
             Log.created_at <= end_date
         ).order_by(Log.created_at.desc()).all()
+
+    @staticmethod
+    def cleanup_old_logs(retention_days=None):
+        """
+        Supprime les logs plus anciens que la duree de retention (RGPD).
+        Retourne le nombre de logs supprimes.
+        """
+        if retention_days is None:
+            retention_days = LOG_RETENTION_DAYS
+        cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+        deleted = Log.query.filter(Log.created_at < cutoff_date).delete()
+        db.session.commit()
+        if deleted > 0:
+            logger.info(f"RGPD: {deleted} log(s) supprimes (anterieurs au {cutoff_date.strftime('%d/%m/%Y')})")
+        return deleted

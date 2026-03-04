@@ -23,6 +23,11 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
+    # N3 - Photo de profil (chemin vers le fichier)
+    profile_photo = db.Column(db.String(255), nullable=True)
+    # N4 - Titre/Role familial personnalise (Papa, Maman, Fils, etc.)
+    family_title = db.Column(db.String(50), nullable=True)
+
     # Relations
     folders = db.relationship('Folder', backref='owner', lazy='dynamic',
                               foreign_keys='Folder.owner_id')
@@ -87,6 +92,42 @@ class User(UserMixin, db.Model):
         if permission and permission.can_edit and permission.is_valid():
             return True
         return False
+
+    @property
+    def display_name(self):
+        """Retourne le nom d'affichage avec le titre familial si defini"""
+        if self.family_title:
+            return f"{self.family_title} ({self.first_name})"
+        return self.full_name
+
+    @property
+    def avatar_url(self):
+        """Retourne l'URL de l'avatar ou un placeholder"""
+        if self.profile_photo:
+            return f'/uploads/avatars/{self.profile_photo}'
+        # Placeholder avec initiales
+        return None
+
+    @property
+    def initials(self):
+        """Retourne les initiales de l'utilisateur"""
+        return f"{self.first_name[0]}{self.last_name[0]}".upper()
+
+    # Titres familiaux predefinies
+    FAMILY_TITLES = [
+        ('', 'Aucun'),
+        ('Papa', 'Papa'),
+        ('Maman', 'Maman'),
+        ('Fils', 'Fils'),
+        ('Fille', 'Fille'),
+        ('Grand-Pere', 'Grand-Pere'),
+        ('Grand-Mere', 'Grand-Mere'),
+        ('Oncle', 'Oncle'),
+        ('Tante', 'Tante'),
+        ('Cousin', 'Cousin'),
+        ('Cousine', 'Cousine'),
+        ('Autre', 'Autre')
+    ]
 
 
 # Import ici pour éviter l'import circulaire

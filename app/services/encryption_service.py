@@ -38,12 +38,28 @@ class EncryptionService:
 
     @staticmethod
     def get_encryption_key() -> bytes:
-        """Récupère la clé de chiffrement depuis la configuration"""
+        """Recupere la cle de chiffrement depuis la configuration ou la genere de facon persistante"""
         key = current_app.config.get('ENCRYPTION_KEY')
         if key:
             return key.encode() if isinstance(key, str) else key
-        # Génère une clé par défaut si aucune n'est configurée
-        return EncryptionService.generate_key()
+
+        # Generer une cle persistante si aucune n'est configuree
+        import os
+        key_file = os.path.join(
+            os.path.dirname(current_app.config.get('UPLOAD_FOLDER', '')),
+            '.encryption_key'
+        )
+        if os.path.exists(key_file):
+            with open(key_file, 'rb') as f:
+                return f.read().strip()
+
+        # Premiere utilisation : generer et sauvegarder la cle
+        new_key = Fernet.generate_key()
+        os.makedirs(os.path.dirname(key_file), exist_ok=True)
+        with open(key_file, 'wb') as f:
+            f.write(new_key)
+        current_app.logger.info("Cle de chiffrement generee et sauvegardee dans .encryption_key")
+        return new_key
 
     @staticmethod
     def encrypt_file(file_path: str, key: bytes = None) -> tuple:

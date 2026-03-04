@@ -1,10 +1,13 @@
 """
 Routes d'authentification
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_required, current_user
 
 from app.services.auth_service import AuthService
+from app.models import db
+from app.models.family import Family, FamilyMember, ShareLink
+from app.services.notification_service import NotificationService
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -21,7 +24,24 @@ def index():
 def login():
     """Page de connexion"""
     if current_user.is_authenticated:
+        # Vérifier s'il y a une invitation en attente
+        pending_token = session.pop('pending_invite_token', None)
+        if pending_token:
+            return redirect(url_for('family.accept_invite', token=pending_token))
         return redirect(url_for('user.dashboard'))
+
+    # Récupérer les infos d'invitation pour l'affichage
+    pending_invite = None
+    pending_token = session.get('pending_invite_token')
+    if pending_token:
+        link = ShareLink.query.filter_by(token=pending_token).first()
+        if link and link.is_valid and link.family_id:
+            family = Family.query.get(link.family_id)
+            if family:
+                pending_invite = {
+                    'family_name': family.name,
+                    'role': FamilyMember.ROLES.get(link.granted_role, 'Membre')
+                }
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -30,7 +50,7 @@ def login():
 
         if not email or not password:
             flash('Veuillez remplir tous les champs.', 'warning')
-            return render_template('login.html')
+            return render_template('login.html', pending_invite=pending_invite)
 
         success, result = AuthService.authenticate(email, password)
 
@@ -38,15 +58,20 @@ def login():
             AuthService.login(result, remember=remember)
             flash(f'Bienvenue, {result.first_name} !', 'success')
 
+            # Traiter l'invitation en attente
+            pending_token = session.pop('pending_invite_token', None)
+            if pending_token:
+                return redirect(url_for('family.accept_invite', token=pending_token))
+
             # Redirection vers la page demandée ou le dashboard
             next_page = request.args.get('next')
-            if next_page:
+            if next_page and next_page.startswith('/') and not next_page.startswith('//'):
                 return redirect(next_page)
             return redirect(url_for('user.dashboard'))
         else:
             flash(result, 'danger')
 
-    return render_template('login.html')
+    return render_template('login.html', pending_invite=pending_invite)
 
 
 @auth_bp.route('/logout')
@@ -62,7 +87,25 @@ def logout():
 def register():
     """Page d'inscription"""
     if current_user.is_authenticated:
+        # Vérifier s'il y a une invitation en attente
+        pending_token = session.pop('pending_invite_token', None)
+        if pending_token:
+            return redirect(url_for('family.accept_invite', token=pending_token))
         return redirect(url_for('user.dashboard'))
+
+    # Récupérer les infos d'invitation pour l'affichage
+    pending_invite = None
+    pending_token = session.get('pending_invite_token')
+    if pending_token:
+        link = ShareLink.query.filter_by(token=pending_token).first()
+        if link and link.is_valid and link.family_id:
+            family = Family.query.get(link.family_id)
+            if family:
+                pending_invite = {
+                    'family_name': family.name,
+                    'role': FamilyMember.ROLES.get(link.granted_role, 'Membre'),
+                    'token': pending_token
+                }
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -75,11 +118,11 @@ def register():
         # Validation de base
         if not all([email, username, password, password_confirm, first_name, last_name]):
             flash('Veuillez remplir tous les champs.', 'warning')
-            return render_template('register.html')
+            return render_template('register.html', pending_invite=pending_invite)
 
         if password != password_confirm:
             flash('Les mots de passe ne correspondent pas.', 'danger')
-            return render_template('register.html')
+            return render_template('register.html', pending_invite=pending_invite)
 
         # Tentative d'inscription
         success, result = AuthService.register_user(
@@ -91,12 +134,31 @@ def register():
         )
 
         if success:
+            # Connexion automatique après inscription
+            from app.models.user import User
+            new_user = User.query.filter_by(email=email).first()
+            if new_user:
+                AuthService.login(new_user, remember=True)
+                # T13 - Message de bienvenue
+                try:
+                    NotificationService.notify_welcome(new_user)
+                except Exception:
+                    pass
+                flash(f'Bienvenue {first_name} ! Votre compte a été créé avec succès.', 'success')
+
+                # Traiter l'invitation en attente
+                pending_token = session.pop('pending_invite_token', None)
+                if pending_token:
+                    return redirect(url_for('family.accept_invite', token=pending_token))
+
+                return redirect(url_for('user.dashboard'))
+
             flash('Compte créé avec succès ! Vous pouvez maintenant vous connecter.', 'success')
             return redirect(url_for('auth.login'))
         else:
             flash(result, 'danger')
 
-    return render_template('register.html')
+    return render_template('register.html', pending_invite=pending_invite)
 
 
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
