@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Verification 2FA - FamiliDocs{% endblock %}
+
+{% block content %}
+<div class="auth-card login">
+    <h1 class="auth-title">Verification 2FA</h1>
+    <p class="auth-subtitle">Entrez le code de votre application d'authentification</p>
+
+    <form method="POST" action="{{ url_for('auth.verify_2fa') }}">
+        <div class="mb-3">
+            <label for="code" class="form-label">Code a 6 chiffres</label>
+            <input type="text" class="form-control text-center" id="code" name="code"
+                   placeholder="000000" required autofocus
+                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                   autocomplete="one-time-code"
+                   style="font-size: 1.5rem; letter-spacing: 0.5rem;">
+            <div class="form-text">Ouvrez votre application (Google Authenticator, Authy, etc.)</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Verifier</button>
+    </form>
+
+    <div class="auth-footer">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-sm">Retour a la connexion</a>
+    </div>
+</div>
+{% endblock %}

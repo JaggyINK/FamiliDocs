@@ -1,0 +1,159 @@
+================================================================
+  FamiliDocs - Identifiants de demonstration
+  Coffre Administratif Numerique Familial
+================================================================
+
+  Pour creer ces comptes : python seed_demo_data.py
+  Lancer l'application   : python app/main.py
+  URL                    : http://localhost:5000
+
+================================================================
+  COMPTES UTILISATEURS
+================================================================
+
+  PARENTS (Administrateurs - tous les droits)
+  -----------------------------------------------
+  Jean Dupont (Papa)
+    Email    : jean.dupont@email.com
+    Mot de passe : Demo2024!
+    Role systeme : Administrateur
+    Role famille : Responsable
+    -> Peut gerer tous les utilisateurs, sauvegardes, logs
+    -> Proprietaire de 8 documents
+
+  Marie Dupont (Maman)
+    Email    : marie.dupont@email.com
+    Mot de passe : Demo2024!
+    Role systeme : Administrateur
+    Role famille : Responsable
+    -> Memes droits que Jean
+    -> Proprietaire de 5 documents
+
+  ENFANTS (Utilisateurs standards)
+  -----------------------------------------------
+  Lucas Dupont (Fils - 17 ans, Terminale)
+    Email    : lucas.dupont@email.com
+    Mot de passe : Demo2024!
+    Role systeme : Utilisateur
+    Role famille : Enfant
+    -> Proprietaire de 3 documents
+    -> A recu l'acces au RIB (temporaire 30 jours)
+
+  Emma Dupont (Fille - 13 ans, 4eme)
+    Email    : emma.dupont@email.com
+    Mot de passe : Demo2024!
+    Role systeme : Utilisateur
+    Role famille : Enfant
+    -> Proprietaire de 2 documents
+    -> Aide Grand-Pere pour ses papiers
+
+  GRAND-PARENT
+  -----------------------------------------------
+  Pierre Dupont (Grand-Pere)
+    Email    : pierre.dupont@email.com
+    Mot de passe : Demo2024!
+    Role systeme : Utilisateur
+    Role famille : Lecteur
+    -> Proprietaire de 2 documents
+    -> A partage ses documents avec Emma
+
+================================================================
+  FAMILLE DUPONT
+================================================================
+
+  Nom      : Famille Dupont
+  Membres  : 5
+  Createur : Jean (Papa)
+
+  Hierarchie des roles :
+    Responsable  -> Jean, Marie (administration complete)
+    Enfant       -> Lucas, Emma (acces limite supervise)
+    Lecteur      -> Pierre (consultation uniquement)
+
+================================================================
+  PARTAGES ACTIFS ENTRE MEMBRES
+================================================================
+
+  Papa <-> Maman (couple - acces complet mutuel)
+    - Avis d'imposition 2024 (edit + download + partage)
+    - Contrat assurance habitation (edit + download)
+    - RIB Compte Joint (download)
+    - Devis peinture salon (edit + download)
+    - Facture EDF Janvier 2024 (download)
+
+  Papa -> Lucas (pere -> fils)
+    - RIB Compte Joint (download, temporaire 30 jours)
+    - Devis peinture salon (consultation seule)
+
+  Maman -> Lucas
+    - Carnet de sante Lucas (download)
+
+  Maman -> Tous (livret de famille)
+    - Livret de famille -> Jean, Lucas, Emma, Pierre
+
+  Grand-Pere -> Emma (lien special)
+    - Attestation retraite CNAV (download, 60 jours)
+    - Carte Vitale Pierre (consultation, 60 jours)
+
+  Papa -> Grand-Pere
+    - Contrat assurance habitation (download)
+
+  Lucas -> Papa + Maman
+    - Bulletin scolaire T1 2024 (download)
+
+  Emma -> Maman
+    - Inscription college (edit + download)
+    - Carnet de sante Emma (download)
+
+================================================================
+  DOCUMENTS (20 fichiers)
+================================================================
+
+  Jean (8 docs)  : CNI, Impots, Assurance, RIB, Ordonnance,
+                    Devis peinture, Facture EDF, Permis
+  Marie (5 docs) : CNI, Bulletin salaire, Carnet sante Lucas,
+                    Contrat travail, Livret de famille
+  Lucas (3 docs) : Bulletin scolaire, Certificat sport,
+                    Carte etudiante
+  Emma (2 docs)  : Inscription college, Carnet sante
+  Pierre (2 docs): Attestation retraite, Carte Vitale
+
+================================================================
+  TACHES (9 taches)
+================================================================
+
+  EN RETARD (1)
+    - Rappeler le peintre (Jean, -2 jours)
+
+  EN COURS (1)
+    - Declaration impots 2024 (Jean, assignee a Marie)
+
+  A VENIR (7)
+    - Transmettre RIB a l'ecole (Jean, +3j)
+    - Renouveler certificat medical Lucas (Marie, +7j)
+    - Vaccins Emma (Marie, +14j)
+    - Scanner documents Grand-Pere (Emma, +21j)
+    - Renouveler assurance habitation (Jean, +30j)
+    - Renouveler inscription foot (Lucas, +45j)
+    - Mise a jour dossier retraite (Pierre, +60j)
+
+================================================================
+  TAGS (8 etiquettes)
+================================================================
+
+  Urgent (#dc3545)  |  A renouveler (#fd7e14)
+  Fiscal (#198754)  |  Medical (#0dcaf0)
+  Scolaire (#6f42c1)|  Important (#ffc107)
+  Archive (#6c757d) |  Couple (#e91e8c)
+
+================================================================
+  CHAT FAMILIAL (14 messages, 2 annonces)
+================================================================
+
+  Conversations simulees entre les 5 membres :
+  - Partage de documents
+  - Demande de RIB par Lucas
+  - Emma propose d'aider Grand-Pere
+  - Rappels sur les echeances
+
+================================================================
