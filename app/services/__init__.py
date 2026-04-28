@@ -1,6 +1,4 @@
-"""
-Services de l'application FamiliDocs
-"""
+# services app
 from .auth_service import AuthService
 from .document_service import DocumentService
 from .permission_service import PermissionService

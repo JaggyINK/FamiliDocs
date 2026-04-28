@@ -1,6 +1,4 @@
-"""
-Routes de messagerie/chat familial - N1
-"""
+# routes chat familial
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 
@@ -15,26 +13,26 @@ message_bp = Blueprint('message', __name__)
 @message_bp.route('/families/<int:family_id>/chat')
 @login_required
 def chat(family_id):
-    """Page de chat familial"""
+    """page chat"""
     family = Family.query.get_or_404(family_id)
 
     if not family.is_member(current_user.id):
         flash("Vous n'etes pas membre de ce groupe.", 'danger')
         return redirect(url_for('family.list_families'))
 
-    # Recuperer les messages (les plus recents en premier)
+    # recup msgs recents
     messages = Message.get_family_messages(family_id, limit=100)
-    # Inverser pour affichage chronologique
+    # inverser pr affichage chrono
     messages = list(reversed(messages))
 
-    # Annonces importantes
+    # annonces
     announcements = Message.get_announcements(family_id, limit=3)
 
-    # Role de l'utilisateur pour savoir s'il peut faire des annonces
+    # check si peut faire annonces
     current_member = FamilyMember.query.filter_by(
         family_id=family_id, user_id=current_user.id
     ).first()
-    can_announce = current_member and current_member.role in ('admin', 'chef_famille', 'parent')
+    can_announce = current_member and current_member.role in ('admin', 'responsable', 'parent')
 
     return render_template(
         'chat.html',
@@ -48,7 +46,7 @@ def chat(family_id):
 @message_bp.route('/families/<int:family_id>/chat/send', methods=['POST'])
 @login_required
 def send_message(family_id):
-    """Envoie un message dans le chat"""
+    """envoie msg chat"""
     family = Family.query.get_or_404(family_id)
 
     if not family.is_member(current_user.id):
@@ -66,12 +64,12 @@ def send_message(family_id):
         flash('Le message est trop long (max 2000 caracteres).', 'warning')
         return redirect(url_for('message.chat', family_id=family_id))
 
-    # Verifier si l'utilisateur peut poster des annonces
+    # verif droit annonce
     if is_announcement:
         member = FamilyMember.query.filter_by(
             family_id=family_id, user_id=current_user.id
         ).first()
-        if not member or member.role not in ('admin', 'chef_famille', 'parent'):
+        if not member or member.role not in ('admin', 'responsable', 'parent'):
             is_announcement = False
 
     message = Message.create_message(
@@ -82,7 +80,7 @@ def send_message(family_id):
     )
     db.session.commit()
 
-    # Notifier les membres pour les annonces
+    # notif membres annonce
     if is_announcement:
         members = FamilyMember.query.filter(
             FamilyMember.family_id == family_id,
@@ -101,7 +99,7 @@ def send_message(family_id):
 @message_bp.route('/messages/<int:message_id>/edit', methods=['POST'])
 @login_required
 def edit_message(message_id):
-    """Modifie un message"""
+    """edit msg"""
     message = Message.query.get_or_404(message_id)
 
     if not message.can_edit(current_user.id):
@@ -127,7 +125,7 @@ def edit_message(message_id):
 @message_bp.route('/messages/<int:message_id>/delete', methods=['POST'])
 @login_required
 def delete_message(message_id):
-    """Supprime un message (soft delete)"""
+    """suppr msg (soft delete)"""
     message = Message.query.get_or_404(message_id)
 
     if not message.can_delete(current_user.id, current_user.is_admin()):
@@ -145,7 +143,7 @@ def delete_message(message_id):
 @message_bp.route('/families/<int:family_id>/chat/load-more')
 @login_required
 def load_more_messages(family_id):
-    """Charge plus de messages (AJAX)"""
+    """load more msgs (AJAX)"""
     family = Family.query.get_or_404(family_id)
 
     if not family.is_member(current_user.id):
@@ -160,7 +158,7 @@ def load_more_messages(family_id):
         'messages': [{
             'id': m.id,
             'content': m.content,
-            'sender_name': m.sender.full_name,
+            'sender_name': m.sender.full_name if m.sender else 'Utilisateur supprime',
             'sender_id': m.sender_id,
             'is_announcement': m.is_announcement,
             'is_edited': m.is_edited,

@@ -1,62 +1,52 @@
 {% extends "base.html" %}
-{% from "macros/breadcrumbs.html" import render_breadcrumbs %}
 
-{% block title %}Mes Groupes - FamiliDocs{% endblock %}
+{% block title %}Familles - FamiliDocs{% endblock %}
 
 {% block content %}
-{{ render_breadcrumbs([{'label': 'Groupes familiaux'}]) }}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-people me-2"></i>Mes Groupes Familiaux</h1>
+    <h1 style="font-size: 1.5rem; font-weight: 700;">Familles</h1>
     <a href="{{ url_for('family.create_family') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-2"></i>Creer un groupe
+        <i class="bi bi-plus-lg me-1"></i>Creer
     </a>
 </div>
 
-<!-- Groupes crees -->
-{% if created_families %}
-<h5 class="mb-3"><i class="bi bi-person-badge me-2"></i>Groupes que je gere</h5>
-<div class="row mb-4">
+{% if created_families or member_families %}
+<div class="row g-3">
     {% for family in created_families %}
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4">
         <a href="{{ url_for('family.view_family', family_id=family.id) }}" class="text-decoration-none">
             <div class="card folder-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-house-heart me-2 text-primary"></i>{{ family.name }}
-                    </h5>
-                    <p class="card-text text-muted small">{{ family.description or 'Aucune description' }}</p>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 style="color: var(--color-text);" class="mb-0">{{ family.name }}</h6>
+                        <span class="badge bg-primary" style="font-size: 0.6rem;">Createur</span>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="badge bg-primary">
-                            <i class="bi bi-people me-1"></i>{{ family.member_count }} membre{{ 's' if family.member_count > 1 else '' }}
-                        </span>
-                        <small class="text-muted">Cree le {{ family.created_at.strftime('%d/%m/%Y') }}</small>
+                        <small class="text-muted">{{ family.member_count }} membre{{ 's' if family.member_count > 1 else '' }}</small>
+                        <a href="{{ url_for('message.chat', family_id=family.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                            <i class="bi bi-chat-dots"></i>
+                        </a>
                     </div>
                 </div>
             </div>
         </a>
     </div>
     {% endfor %}
-</div>
-{% endif %}
 
-<!-- Groupes dont je suis membre -->
-{% if member_families %}
-<h5 class="mb-3"><i class="bi bi-people me-2"></i>Groupes auxquels j'appartiens</h5>
-<div class="row mb-4">
     {% for family in member_families %}
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4">
         <a href="{{ url_for('family.view_family', family_id=family.id) }}" class="text-decoration-none">
             <div class="card folder-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-house me-2 text-info"></i>{{ family.name }}
-                    </h5>
-                    <p class="card-text text-muted small">{{ family.description or 'Aucune description' }}</p>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 style="color: var(--color-text);" class="mb-0">{{ family.name }}</h6>
+                        <span class="badge bg-secondary" style="font-size: 0.6rem;">{{ family.get_member_role(current_user.id) }}</span>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="badge bg-info">
-                            <i class="bi bi-people me-1"></i>{{ family.member_count }} membre{{ 's' if family.member_count > 1 else '' }}
-                        </span>
-                        <span class="badge bg-secondary">{{ family.get_member_role(current_user.id) }}</span>
+                        <small class="text-muted">{{ family.member_count }} membre{{ 's' if family.member_count > 1 else '' }}</small>
+                        <a href="{{ url_for('message.chat', family_id=family.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                            <i class="bi bi-chat-dots"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -64,15 +54,13 @@
     </div>
     {% endfor %}
 </div>
-{% endif %}
-
-{% if not created_families and not member_families %}
+{% else %}
 <div class="text-center py-5">
-    <i class="bi bi-people text-muted" style="font-size: 4rem;"></i>
-    <h4 class="mt-3">Aucun groupe familial</h4>
-    <p class="text-muted">Creez un groupe pour partager des documents avec vos proches</p>
+    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+    <h5 class="mt-3">Aucune famille</h5>
+    <p class="text-muted">Creez un groupe pour partager avec vos proches</p>
     <a href="{{ url_for('family.create_family') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-2"></i>Creer mon premier groupe
+        <i class="bi bi-plus-lg me-1"></i>Creer un groupe
     </a>
 </div>
 {% endif %}

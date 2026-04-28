@@ -1,6 +1,4 @@
-"""
-Routes de gestion des documents
-"""
+# routes gestion docs
 import os
 from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, abort
@@ -21,8 +19,7 @@ document_bp = Blueprint('document', __name__, url_prefix='/documents')
 @document_bp.route('/')
 @login_required
 def list_documents():
-    """Liste tous les documents de l'utilisateur"""
-    # Filtres
+    """liste docs user"""
     folder_id = request.args.get('folder', type=int)
     search = request.args.get('search', '').strip()
     file_type = request.args.get('type', '').strip()
@@ -38,7 +35,7 @@ def list_documents():
         file_type=file_type
     )
 
-    # T16 - Tri colonnes
+    # tri colonnes
     if sort == 'name':
         sort_col = Document.name
     elif sort == 'file_size':
@@ -55,7 +52,6 @@ def list_documents():
 
     pagination = query.paginate(page=page, per_page=20, error_out=False)
 
-    # Dossiers pour le filtre
     folders = Folder.query.filter_by(owner_id=current_user.id).all()
 
     return render_template(
@@ -74,7 +70,7 @@ def list_documents():
 @document_bp.route('/shared')
 @login_required
 def shared_documents():
-    """Liste des documents partagés avec l'utilisateur"""
+    """docs partages avec moi"""
     documents = DocumentService.get_shared_documents(current_user.id)
     return render_template('shared_documents.html', documents=documents)
 
@@ -82,15 +78,12 @@ def shared_documents():
 @document_bp.route('/my-shares')
 @login_required
 def my_shared_documents():
-    """Liste des documents que j'ai partagés avec d'autres"""
+    """docs que j'ai partage"""
     shared_docs = PermissionService.get_documents_shared_by_user(current_user.id)
 
-    # Enrichir avec les infos de partage
     docs_with_shares = []
     for doc in shared_docs:
         perms = PermissionService.get_document_permissions(doc.id)
-        # Exclure le propriétaire des permissions
-        # Garder seulement les permissions des autres utilisateurs
         filtered_perms = []
         for p in perms:
             if p.user_id != current_user.id:
@@ -108,7 +101,7 @@ def my_shared_documents():
 @document_bp.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
-    """Upload d'un nouveau document"""
+    """upload doc"""
     if request.method == 'POST':
         file = request.files.get('file')
         name = request.form.get('name', '').strip()
@@ -119,7 +112,6 @@ def upload():
             confidentiality = 'private'
         expiry_date_str = request.form.get('expiry_date', '').strip()
 
-        # Validation
         if not file or file.filename == '':
             flash('Veuillez selectionner un fichier.', 'warning')
             folders = Folder.query.filter_by(owner_id=current_user.id).all()
@@ -129,18 +121,16 @@ def upload():
         if not name:
             name = file.filename
 
-        # Conversion de la date d'echeance
         expiry_date = None
         if expiry_date_str:
             try:
                 expiry_date = datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash('Format de date invalide.', 'warning')
+                flash("Format de date invalide. Utilisez le format AAAA-MM-JJ (exemple : 2026-12-31).", 'warning')
                 folders = Folder.query.filter_by(owner_id=current_user.id).all()
                 confidentiality_levels = Config.CONFIDENTIALITY_LEVELS
                 return render_template('upload_document.html', folders=folders, confidentiality_levels=confidentiality_levels, form_data=request.form)
 
-        # Upload
         success, result = DocumentService.upload_document(
             file=file,
             name=name,
@@ -153,7 +143,7 @@ def upload():
         )
 
         if success:
-            flash(f'Document "{name}" uploadé avec succès.', 'success')
+            flash(f'Document "{name}" uploade.', 'success')
             return redirect(url_for('document.view', document_id=result.id))
         else:
             flash(result, 'danger')
@@ -171,15 +161,13 @@ def upload():
 @document_bp.route('/<int:document_id>')
 @login_required
 def view(document_id):
-    """Affiche les détails d'un document"""
+    """details doc"""
     document = Document.query.get_or_404(document_id)
 
-    # Vérification des droits
     if not current_user.can_access_document(document):
         flash('Vous n\'avez pas accès à ce document.', 'danger')
         return redirect(url_for('document.list_documents'))
 
-    # Log de consultation
     Log.create_log(
         user_id=current_user.id,
         action='document_view',
@@ -188,10 +176,7 @@ def view(document_id):
     )
     db.session.commit()
 
-    # Permissions du document
     permissions = PermissionService.get_document_permissions(document.id)
-
-    # Historique du document
     logs = Log.get_document_logs(document.id, limit=10)
 
     return render_template(
@@ -206,10 +191,9 @@ def view(document_id):
 @document_bp.route('/<int:document_id>/download')
 @login_required
 def download(document_id):
-    """Télécharge un document"""
+    """telecharge doc"""
     document = Document.query.get_or_404(document_id)
 
-    # Vérification des droits
     if not PermissionService.check_permission(document_id, current_user.id, 'download'):
         flash('Vous n\'avez pas le droit de télécharger ce document.', 'danger')
         return redirect(url_for('document.view', document_id=document_id))
@@ -220,7 +204,7 @@ def download(document_id):
         flash('Fichier introuvable sur le serveur.', 'danger')
         return redirect(url_for('document.view', document_id=document_id))
 
-    # T8 - Dechiffrement si le document est chiffre
+    # dechiffrement si doc chiffre
     temp_decrypted = None
     if document.is_encrypted:
         from app.services.encryption_service import EncryptionService
@@ -228,14 +212,12 @@ def download(document_id):
         if not success:
             flash('Erreur lors du dechiffrement du document.', 'danger')
             return redirect(url_for('document.view', document_id=document_id))
-        # Creer un fichier temporaire pour l'envoi
         import tempfile
         temp_decrypted = tempfile.NamedTemporaryFile(delete=False, suffix='_' + document.original_filename)
         temp_decrypted.write(result)
         temp_decrypted.close()
         file_path = temp_decrypted.name
 
-    # Log du téléchargement
     Log.create_log(
         user_id=current_user.id,
         action='document_download',
@@ -250,7 +232,7 @@ def download(document_id):
         as_attachment=True
     )
 
-    # Nettoyage du fichier temporaire dechiffre
+    # cleanup fichier temp dechiffre
     if temp_decrypted:
         from flask import after_this_request
         temp_path = temp_decrypted.name
@@ -267,13 +249,74 @@ def download(document_id):
     return response
 
 
+@document_bp.route('/<int:document_id>/preview')
+@login_required
+def preview(document_id):
+    """sert le fichier en mode inline (visualisation dans le navigateur)"""
+    document = Document.query.get_or_404(document_id)
+
+    if not current_user.can_access_document(document):
+        abort(403)
+
+    file_path = DocumentService.get_document_path(document)
+
+    if not os.path.exists(file_path):
+        abort(404)
+
+    # dechiffrement si doc chiffre
+    if document.is_encrypted:
+        from app.services.encryption_service import EncryptionService
+        success, result = EncryptionService.decrypt_to_memory(file_path)
+        if not success:
+            abort(500)
+        import tempfile
+        temp_decrypted = tempfile.NamedTemporaryFile(delete=False, suffix='_' + document.original_filename)
+        temp_decrypted.write(result)
+        temp_decrypted.close()
+        file_path = temp_decrypted.name
+
+        from flask import after_this_request
+        temp_path = temp_decrypted.name
+
+        @after_this_request
+        def cleanup(resp):
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except OSError:
+                pass
+            return resp
+
+    # MIME types pour affichage inline
+    mime_map = {
+        'pdf': 'application/pdf',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+        'webp': 'image/webp',
+        'txt': 'text/plain',
+        'md': 'text/plain',
+        'csv': 'text/csv',
+    }
+
+    ext = document.original_filename.rsplit('.', 1)[-1].lower() if '.' in document.original_filename else ''
+    mimetype = mime_map.get(ext, mime_map.get(document.file_type, None))
+
+    if mimetype:
+        return send_file(file_path, mimetype=mimetype, download_name=document.original_filename)
+    else:
+        # type non previewable -> fallback download
+        return send_file(file_path, download_name=document.original_filename, as_attachment=True)
+
+
 @document_bp.route('/<int:document_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit(document_id):
-    """Modification des métadonnées d'un document"""
+    """edit metadonnees doc"""
     document = Document.query.get_or_404(document_id)
 
-    # Vérification des droits
     if not current_user.can_edit_document(document):
         flash('Vous n\'avez pas le droit de modifier ce document.', 'danger')
         return redirect(url_for('document.view', document_id=document_id))
@@ -291,7 +334,7 @@ def edit(document_id):
             try:
                 expiry_date = datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash('Format de date invalide.', 'warning')
+                flash("Format de date d'echeance invalide. Utilisez AAAA-MM-JJ (exemple : 2026-12-31).", 'warning')
                 return redirect(url_for('document.edit', document_id=document_id))
 
         next_review_date = None
@@ -299,7 +342,7 @@ def edit(document_id):
             try:
                 next_review_date = datetime.strptime(next_review_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash('Format de date de revision invalide.', 'warning')
+                flash("Format de date de revision invalide. Utilisez AAAA-MM-JJ (exemple : 2026-12-31).", 'warning')
                 return redirect(url_for('document.edit', document_id=document_id))
 
         success, message = DocumentService.update_document(
@@ -333,10 +376,9 @@ def edit(document_id):
 @document_bp.route('/<int:document_id>/delete', methods=['POST'])
 @login_required
 def delete(document_id):
-    """Suppression d'un document"""
+    """suppresion doc"""
     document = Document.query.get_or_404(document_id)
 
-    # Seul le propriétaire ou un admin peut supprimer
     if document.owner_id != current_user.id and not current_user.is_admin():
         flash('Vous n\'avez pas le droit de supprimer ce document.', 'danger')
         return redirect(url_for('document.view', document_id=document_id))
@@ -354,22 +396,20 @@ def delete(document_id):
 @document_bp.route('/<int:document_id>/share', methods=['GET', 'POST'])
 @login_required
 def share(document_id):
-    """Partage d'un document (supporte le partage multiple)"""
+    """partage doc (multiple)"""
     from datetime import date, timedelta
 
     document = Document.query.get_or_404(document_id)
 
-    # Vérification des droits de partage
     if document.owner_id != current_user.id:
         if not PermissionService.check_permission(document_id, current_user.id, 'share'):
             flash('Vous n\'avez pas le droit de partager ce document.', 'danger')
             return redirect(url_for('document.view', document_id=document_id))
 
     if request.method == 'POST':
-        # Récupérer la liste des user_ids (partage multiple)
         user_ids = request.form.getlist('user_ids', type=int)
 
-        # Fallback pour l'ancien formulaire (single user_id)
+        # fallback ancien formulaire
         if not user_ids:
             single_user_id = request.form.get('user_id', type=int)
             if single_user_id:
@@ -389,7 +429,7 @@ def share(document_id):
         if end_date_str:
             try:
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                # Limite max 90 jours
+                # limite 90j max
                 max_allowed = date.today() + timedelta(days=90)
                 if end_date > max_allowed:
                     end_date = max_allowed
@@ -398,7 +438,6 @@ def share(document_id):
                 flash('Format de date invalide.', 'warning')
                 return redirect(url_for('document.share', document_id=document_id))
 
-        # Partage multiple
         success, result = PermissionService.grant_multiple_permissions(
             document_id=document_id,
             user_ids=user_ids,
@@ -411,33 +450,26 @@ def share(document_id):
         )
 
         if success:
-            # T9 - Notification de partage pour chaque destinataire
+            # notif partage
             from app.services.notification_service import NotificationService
             for uid in user_ids:
                 if uid != current_user.id:
                     try:
                         NotificationService.notify_document_shared(document, uid, current_user)
                     except Exception:
-                        pass  # Ne pas bloquer le partage si la notification echoue
+                        pass  # pas bloquer si notif echoue
             flash(result, 'success')
             return redirect(url_for('document.view', document_id=document_id))
         else:
             flash(result, 'danger')
 
-    # Utilisateurs disponibles (exclut soi-même et ceux qui ont déjà accès)
     available_users = PermissionService.get_accessible_users_for_sharing(current_user.id, document_id)
-
-    # Membres de famille disponibles
     family_members = PermissionService.get_family_members_for_sharing(current_user.id, document_id)
-
-    # Permissions existantes
     existing_permissions = PermissionService.get_document_permissions(document_id)
 
-    # Liens de partage actifs
     from app.models.family import ShareLink
     share_links = ShareLink.get_active_links_for_document(document_id)
 
-    # Dates pour le formulaire (limite 90 jours)
     today = date.today().isoformat()
     max_date = (date.today() + timedelta(days=90)).isoformat()
 
@@ -456,7 +488,7 @@ def share(document_id):
 @document_bp.route('/<int:document_id>/revoke-all', methods=['POST'])
 @login_required
 def revoke_all_access(document_id):
-    """Révoque tous les accès à un document"""
+    """revoque tous acces doc"""
     document = Document.query.get_or_404(document_id)
 
     if document.owner_id != current_user.id and not current_user.is_admin():
@@ -481,7 +513,7 @@ def revoke_all_access(document_id):
 @document_bp.route('/<int:document_id>/revoke/<int:user_id>', methods=['POST'])
 @login_required
 def revoke_access(document_id, user_id):
-    """Révoque l'accès d'un utilisateur à un document"""
+    """revoque acces user sur doc"""
     document = Document.query.get_or_404(document_id)
 
     if document.owner_id != current_user.id and not current_user.is_admin():
@@ -505,7 +537,7 @@ def revoke_access(document_id, user_id):
 @document_bp.route('/<int:document_id>/mark-reviewed', methods=['POST'])
 @login_required
 def mark_reviewed(document_id):
-    """Marque un document comme révisé (N2)"""
+    """marque doc revise"""
     document = Document.query.get_or_404(document_id)
 
     if document.owner_id != current_user.id and not current_user.is_admin():
@@ -514,7 +546,6 @@ def mark_reviewed(document_id):
 
     document.mark_reviewed()
 
-    # Log de l'action
     Log.create_log(
         user_id=current_user.id,
         action='document_review',
@@ -530,7 +561,7 @@ def mark_reviewed(document_id):
 @document_bp.route('/bulk-action', methods=['POST'])
 @login_required
 def bulk_action():
-    """T17 - Operations en masse sur les documents"""
+    """operations en masse docs"""
     action = request.form.get('action')
     doc_ids = request.form.getlist('doc_ids', type=int)
 

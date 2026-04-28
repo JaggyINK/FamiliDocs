@@ -1,13 +1,10 @@
-"""
-Service de notifications - Generation et envoi des notifications
-FamiliDocs v2.0 - Amelioration BTS SIO SLAM
-"""
+# service notifs
+import os
 from datetime import datetime, timedelta
 import json
 import logging
 import smtplib
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 from app.models import db
 
@@ -20,19 +17,19 @@ from app.models.user import User
 
 
 class NotificationService:
-    """Service pour la gestion des notifications"""
+    """gest notifs"""
 
-    # Configuration email (simulee pour le projet BTS)
-    EMAIL_ENABLED = False  # Activer pour production
-    SMTP_SERVER = 'smtp.gmail.com'
-    SMTP_PORT = 587
-    SMTP_USER = ''
-    SMTP_PASSWORD = ''
-    SENDER_EMAIL = 'noreply@familidocs.local'
+    # cfg email (env vars)
+    EMAIL_ENABLED = os.environ.get('EMAIL_ENABLED', 'false').lower() == 'true'
+    SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+    SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
+    SMTP_USER = os.environ.get('SMTP_USER', '')
+    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+    SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@familidocs.local')
 
     @staticmethod
     def notify_task_due(task, days_before=0):
-        """Cree une notification pour une tache a echeance"""
+        """notif tache echeance"""
         if days_before == 0:
             title = f"Tache a faire aujourd'hui : {task.title}"
             message = f"La tache '{task.title}' arrive a echeance aujourd'hui."
@@ -71,7 +68,7 @@ class NotificationService:
 
     @staticmethod
     def notify_document_expiry(document, days_before=0):
-        """Cree une notification pour un document qui expire"""
+        """notif doc expire"""
         if days_before == 0:
             title = f"Document expire aujourd'hui : {document.name}"
             message = f"Le document '{document.name}' expire aujourd'hui."
@@ -103,7 +100,7 @@ class NotificationService:
 
     @staticmethod
     def notify_document_shared(document, shared_with_user_id, shared_by_user):
-        """Notifie un utilisateur qu'un document a ete partage avec lui"""
+        """notif doc partage"""
         notification = Notification.create_notification(
             user_id=shared_with_user_id,
             type='document_shared',
@@ -119,7 +116,7 @@ class NotificationService:
 
     @staticmethod
     def notify_permission_granted(permission, granting_user):
-        """Notifie qu'une permission a ete accordee"""
+        """notif perm accordee"""
         document = Document.query.get(permission.document_id)
         user = User.query.get(permission.user_id)
 
@@ -151,7 +148,7 @@ class NotificationService:
 
     @staticmethod
     def notify_permission_revoked(document, revoked_user_id, revoking_user):
-        """Notifie qu'une permission a ete revoquee"""
+        """notif perm revoquee"""
         notification = Notification.create_notification(
             user_id=revoked_user_id,
             type='permission_revoked',
@@ -166,7 +163,7 @@ class NotificationService:
 
     @staticmethod
     def notify_permission_expiring(permission, days_before):
-        """Notifie qu'une permission va expirer"""
+        """notif perm expire bientot"""
         document = Document.query.get(permission.document_id)
 
         notification = Notification.create_notification(
@@ -184,7 +181,7 @@ class NotificationService:
 
     @staticmethod
     def notify_task_assigned(task, assigned_by_user):
-        """Cree une notification pour une tache assignee a un utilisateur"""
+        """notif tache assignee"""
         notification = Notification.create_notification(
             user_id=task.assigned_to_id,
             type='task_assigned',
@@ -200,7 +197,7 @@ class NotificationService:
 
     @staticmethod
     def notify_welcome(user):
-        """Cree une notification de bienvenue pour un nouvel utilisateur"""
+        """notif bienvenue"""
         notification = Notification.create_notification(
             user_id=user.id,
             type='welcome',
@@ -215,7 +212,7 @@ class NotificationService:
 
     @staticmethod
     def notify_backup_complete(user_id, backup_filename):
-        """Notifie qu'une sauvegarde est terminee"""
+        """notif backup ok"""
         notification = Notification.create_notification(
             user_id=user_id,
             type='backup_complete',
@@ -230,7 +227,7 @@ class NotificationService:
 
     @staticmethod
     def notify_system(user_id, title, message, priority='normal'):
-        """Cree une notification systeme generique"""
+        """cree notif systeme"""
         notification = Notification.create_notification(
             user_id=user_id,
             type='system',
@@ -244,10 +241,7 @@ class NotificationService:
 
     @staticmethod
     def check_and_create_due_notifications():
-        """
-        Verifie et cree les notifications pour les taches et documents a echeance.
-        A appeler periodiquement (cron job ou scheduler).
-        """
+        """check echeances + cree notifs (cron)"""
         today = datetime.utcnow().date()
         notifications_created = 0
 
@@ -330,55 +324,29 @@ class NotificationService:
 
     @staticmethod
     def _send_email_notification(to_email, subject, body):
-        """
-        Envoie une notification par email.
-        Note: Simule l'envoi pour le projet BTS (log seulement).
-        """
+        """envoi email (simule en dev)"""
         if not NotificationService.EMAIL_ENABLED:
-            # Mode simulation - log seulement
             logger.info(f"[EMAIL SIMULE] To: {to_email}, Subject: {subject}")
             return True
 
         try:
-            msg = MIMEMultipart()
+            msg = MIMEText(f"FamiliDocs\n\n{subject}\n\n{body}")
             msg['From'] = NotificationService.SENDER_EMAIL
             msg['To'] = to_email
             msg['Subject'] = f"[FamiliDocs] {subject}"
-
-            html_body = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #0d6efd;">FamiliDocs</h2>
-                    <hr>
-                    <h3>{subject}</h3>
-                    <p>{body}</p>
-                    <hr>
-                    <p style="color: #666; font-size: 12px;">
-                        Cet email a ete envoye automatiquement par FamiliDocs.
-                        Ne repondez pas a ce message.
-                    </p>
-                </div>
-            </body>
-            </html>
-            """
-
-            msg.attach(MIMEText(html_body, 'html'))
 
             with smtplib.SMTP(NotificationService.SMTP_SERVER, NotificationService.SMTP_PORT) as server:
                 server.starttls()
                 server.login(NotificationService.SMTP_USER, NotificationService.SMTP_PASSWORD)
                 server.send_message(msg)
-
             return True
-
         except Exception as e:
-            logger.error(f"Erreur envoi email: {str(e)}")
+            logger.error(f"Erreur envoi email: {e}")
             return False
 
     @staticmethod
     def get_notification_summary(user_id):
-        """Retourne un resume des notifications pour le dashboard"""
+        """resume notifs dashboard"""
         unread_count = Notification.get_unread_count(user_id)
 
         urgent_count = Notification.query.filter_by(
@@ -404,7 +372,7 @@ class NotificationService:
 
     @staticmethod
     def cleanup():
-        """Nettoie les anciennes notifications"""
+        """cleanup vieilles notifs"""
         expired = Notification.cleanup_expired()
         old = Notification.delete_old_notifications(days=90)
         return {'expired_deleted': expired, 'old_deleted': old}

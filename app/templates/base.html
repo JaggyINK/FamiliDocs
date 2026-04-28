@@ -8,7 +8,7 @@
     <!-- Google Fonts — Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -90,9 +90,16 @@
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Collaboration</div>
                 <a href="{{ url_for('family.list_families') }}"
-                   class="sidebar-link {{ 'active' if request.endpoint and 'family.' in request.endpoint }}">
+                   class="sidebar-link {{ 'active' if request.endpoint and 'family.' in request.endpoint and 'message' not in request.endpoint|default('') }}">
                     <i class="bi bi-people"></i> Famille
                 </a>
+                {% if current_user.family_memberships.count() > 0 %}
+                {% set first_family = current_user.family_memberships.first() %}
+                <a href="{{ url_for('message.chat', family_id=first_family.family_id) }}"
+                   class="sidebar-link {{ 'active' if request.endpoint and 'message.' in request.endpoint }}">
+                    <i class="bi bi-chat-dots"></i> Chat familial
+                </a>
+                {% endif %}
                 <a href="{{ url_for('notification.list_notifications') }}"
                    class="sidebar-link {{ 'active' if request.endpoint and 'notification.' in request.endpoint }}">
                     <i class="bi bi-bell"></i> Notifications

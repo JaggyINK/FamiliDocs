@@ -1,47 +1,38 @@
-"""
-Modele Notification - Gestion des notifications utilisateurs
-FamiliDocs v2.0 - Amelioration BTS SIO SLAM
-"""
+# modele notif
 from datetime import datetime
 from . import db
 
 
 class Notification(db.Model):
-    """Modele representant une notification utilisateur"""
+    """notif utilisatuer"""
 
     __tablename__ = 'notifications'
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
 
-    # Type de notification
     type = db.Column(db.String(50), nullable=False)  # task_due, document_expiry, share, system
     title = db.Column(db.String(200), nullable=False)
     message = db.Column(db.Text, nullable=False)
 
-    # Priorite et statut
-    priority = db.Column(db.String(20), default='normal')  # low, normal, high, urgent
+    priority = db.Column(db.String(20), default='normal')
     is_read = db.Column(db.Boolean, default=False)
     is_email_sent = db.Column(db.Boolean, default=False)
 
-    # References optionnelles
     document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=True)
     task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True)
 
-    # Dates
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     read_at = db.Column(db.DateTime, nullable=True)
-    expires_at = db.Column(db.DateTime, nullable=True)  # Notification auto-supprimee apres
+    expires_at = db.Column(db.DateTime, nullable=True)
 
-    # Donnees supplementaires (JSON)
-    extra_data = db.Column(db.Text, nullable=True)  # JSON pour donnees flexibles
+    extra_data = db.Column(db.Text, nullable=True)  # JSON data
 
-    # Relations
     user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic'))
     document = db.relationship('Document', backref=db.backref('notifications', lazy='dynamic'))
     task = db.relationship('Task', backref=db.backref('notifications', lazy='dynamic'))
 
-    # Types de notifications disponibles
+    # types dispo
     NOTIFICATION_TYPES = {
         'task_due': 'Tache a echeance',
         'task_overdue': 'Tache en retard',
@@ -69,17 +60,17 @@ class Notification(db.Model):
 
     @property
     def type_label(self):
-        """Retourne le libelle du type de notification"""
+        """label type notif"""
         return self.NOTIFICATION_TYPES.get(self.type, self.type)
 
     @property
     def priority_color(self):
-        """Retourne la couleur Bootstrap associee a la priorite"""
+        """couleur bootstrap priorite"""
         return self.PRIORITY_COLORS.get(self.priority, 'primary')
 
     @property
     def icon(self):
-        """Retourne l'icone Bootstrap associee au type"""
+        """icone bootstrap type"""
         icons = {
             'task_due': 'bi-clock',
             'task_overdue': 'bi-exclamation-triangle',
@@ -98,37 +89,33 @@ class Notification(db.Model):
 
     @property
     def is_expired(self):
-        """Verifie si la notification a expire"""
+        """notif expiree ?"""
         if not self.expires_at:
             return False
         return datetime.utcnow() > self.expires_at
 
     @property
     def time_ago(self):
-        """Retourne le temps ecoule depuis la creation"""
+        """temps ecoule depuis creation"""
         delta = datetime.utcnow() - self.created_at
         jours = delta.days
         secondes = delta.seconds
 
-        # Plus d'un mois
         if jours > 30:
             mois = jours // 30
             return f"{mois} mois"
 
-        # Plus d'un jour
         if jours > 1:
             return f"{jours} jours"
         if jours == 1:
             return "1 jour"
 
-        # Plus d'une heure
         heures = secondes // 3600
         if heures > 1:
             return f"{heures} heures"
         if heures == 1:
             return "1 heure"
 
-        # Plus d'une minute
         minutes = secondes // 60
         if minutes > 1:
             return f"{minutes} minutes"
@@ -138,13 +125,13 @@ class Notification(db.Model):
         return "A l'instant"
 
     def mark_as_read(self):
-        """Marque la notification comme lue"""
+        """marque lue"""
         if not self.is_read:
             self.is_read = True
             self.read_at = datetime.utcnow()
 
     def mark_as_unread(self):
-        """Marque la notification comme non lue"""
+        """marque non lue"""
         self.is_read = False
         self.read_at = None
 
@@ -152,7 +139,7 @@ class Notification(db.Model):
     def create_notification(user_id, type, title, message, priority='normal',
                            document_id=None, task_id=None, expires_at=None,
                            extra_data=None):
-        """Cree une nouvelle notification"""
+        """cree notif"""
         notification = Notification(
             user_id=user_id,
             type=type,
@@ -169,7 +156,7 @@ class Notification(db.Model):
 
     @staticmethod
     def get_unread_count(user_id):
-        """Retourne le nombre de notifications non lues"""
+        """nb notifs non lues"""
         return Notification.query.filter_by(
             user_id=user_id,
             is_read=False
@@ -177,13 +164,13 @@ class Notification(db.Model):
 
     @staticmethod
     def get_user_notifications(user_id, unread_only=False, limit=50):
-        """Recupere les notifications d'un utilisateur"""
+        """recup notifs user"""
         query = Notification.query.filter_by(user_id=user_id)
 
         if unread_only:
             query = query.filter_by(is_read=False)
 
-        # Exclure les notifications expirees
+        # exclure expirees
         query = query.filter(
             db.or_(
                 Notification.expires_at.is_(None),
@@ -195,7 +182,7 @@ class Notification(db.Model):
 
     @staticmethod
     def mark_all_as_read(user_id):
-        """Marque toutes les notifications d'un utilisateur comme lues"""
+        """tout marquer lu"""
         Notification.query.filter_by(
             user_id=user_id,
             is_read=False
@@ -207,7 +194,7 @@ class Notification(db.Model):
 
     @staticmethod
     def delete_old_notifications(days=90):
-        """Supprime les notifications lues de plus de X jours"""
+        """supprime notifs lues anciennes"""
         from datetime import timedelta
         cutoff = datetime.utcnow() - timedelta(days=days)
 
@@ -221,7 +208,7 @@ class Notification(db.Model):
 
     @staticmethod
     def cleanup_expired():
-        """Supprime les notifications expirees"""
+        """supprime notifs expirees"""
         deleted = Notification.query.filter(
             Notification.expires_at < datetime.utcnow()
         ).delete()

@@ -1,6 +1,4 @@
-"""
-Routes de recherche avancee et gestion des tags
-"""
+# routes recherche + tags
 from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
@@ -18,7 +16,7 @@ search_bp = Blueprint('search', __name__)
 @search_bp.route('/search')
 @login_required
 def advanced_search():
-    """Page de recherche avancee"""
+    """recherche avancee"""
     query = request.args.get('q', '').strip()
     file_type = request.args.get('type', '').strip()
     folder_id = request.args.get('folder', type=int)
@@ -29,7 +27,7 @@ def advanced_search():
     sort_by = request.args.get('sort', 'updated_at')
     sort_order = request.args.get('order', 'desc')
 
-    # Conversion des dates
+    # conv dates
     date_from = None
     date_to = None
     if date_from_str:
@@ -43,7 +41,7 @@ def advanced_search():
         except ValueError:
             pass
 
-    # Lancer la recherche si des criteres sont fournis
+    # lancer recherche si criteres
     documents = []
     pagination = None
     has_searched = False
@@ -80,7 +78,7 @@ def advanced_search():
                 sort_order=sort_order
             )
 
-    # Donnees pour les filtres
+    # data filtres
     folders = Folder.query.filter_by(owner_id=current_user.id).all()
     tags = Tag.get_user_tags(current_user.id)
 
@@ -107,7 +105,7 @@ def advanced_search():
 @search_bp.route('/search/global')
 @login_required
 def global_search():
-    """Recherche globale (API AJAX)"""
+    """recherche globale AJAX"""
     query = request.args.get('q', '').strip()
 
     if len(query) < 2:
@@ -151,12 +149,12 @@ def global_search():
     })
 
 
-# --- Gestion des tags ---
+# --- tags ---
 
 @search_bp.route('/tags')
 @login_required
 def list_tags():
-    """Liste tous les tags de l'utilisateur"""
+    """liste tags"""
     page = request.args.get('page', 1, type=int)
     pagination = Tag.query.filter_by(owner_id=current_user.id)\
         .order_by(Tag.name).paginate(page=page, per_page=20, error_out=False)
@@ -166,7 +164,7 @@ def list_tags():
 @search_bp.route('/tags/create', methods=['POST'])
 @login_required
 def create_tag():
-    """Cree un nouveau tag"""
+    """cree tag"""
     name = request.form.get('name', '').strip()
     color = request.form.get('color', '#6c757d').strip()
 
@@ -195,7 +193,7 @@ def create_tag():
 @search_bp.route('/tags/<int:tag_id>/delete', methods=['POST'])
 @login_required
 def delete_tag(tag_id):
-    """Supprime un tag"""
+    """suppr tag"""
     tag = Tag.query.get_or_404(tag_id)
 
     if tag.owner_id != current_user.id:
@@ -213,7 +211,7 @@ def delete_tag(tag_id):
 @search_bp.route('/documents/<int:document_id>/tags', methods=['POST'])
 @login_required
 def add_tag_to_document(document_id):
-    """Ajoute un tag a un document"""
+    """ajoute tag sur doc"""
     document = Document.query.get_or_404(document_id)
 
     if document.owner_id != current_user.id and not current_user.is_admin():
@@ -245,7 +243,7 @@ def add_tag_to_document(document_id):
 @search_bp.route('/documents/<int:document_id>/tags/<int:tag_id>/remove', methods=['POST'])
 @login_required
 def remove_tag_from_document(document_id, tag_id):
-    """Retire un tag d'un document"""
+    """retire tag du doc"""
     document = Document.query.get_or_404(document_id)
 
     if document.owner_id != current_user.id and not current_user.is_admin():

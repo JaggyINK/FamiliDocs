@@ -3,158 +3,92 @@
 {% block title %}Administration - FamiliDocs{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-gear-fill me-2"></i>Administration</h1>
-</div>
+<h1 style="font-size: 1.5rem; font-weight: 700;" class="mb-4">Administration</h1>
 
-<!-- Statistiques (cartes cliquables) -->
-<div class="row mb-4">
-    <div class="col-md-2 mb-3">
-        <a href="{{ url_for('admin.users') }}" class="card bg-primary text-white text-decoration-none">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ stats.total_users }}</h3>
-                <small>Utilisateurs</small>
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('admin.users') }}" class="text-decoration-none">
+            <div class="stat-card">
+                <div class="stat-card-value">{{ stats.total_users }}</div>
+                <div class="stat-card-label">Utilisateurs</div>
             </div>
         </a>
     </div>
-    <div class="col-md-2 mb-3">
-        <a href="{{ url_for('admin.users') }}" class="card bg-success text-white text-decoration-none">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ stats.active_users }}</h3>
-                <small>Actifs</small>
-            </div>
-        </a>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-value">{{ stats.total_documents }}</div>
+            <div class="stat-card-label">Documents</div>
+        </div>
     </div>
-    <div class="col-md-2 mb-3">
-        <a href="{{ url_for('document.list_documents') }}" class="card bg-info text-white text-decoration-none">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ stats.total_documents }}</h3>
-                <small>Documents</small>
-            </div>
-        </a>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-value">{{ stats.total_tasks }}</div>
+            <div class="stat-card-label">Taches</div>
+        </div>
     </div>
-    <div class="col-md-2 mb-3">
-        <a href="{{ url_for('user.folders') }}" class="card bg-secondary text-white text-decoration-none">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ stats.total_folders }}</h3>
-                <small>Dossiers</small>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-2 mb-3">
-        <a href="{{ url_for('task.list_tasks') }}" class="card bg-warning text-dark text-decoration-none" title="Voir toutes les taches : en cours, terminees, en attente">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ stats.total_tasks }}</h3>
-                <small>Taches</small>
-                <div class="mt-1"><small style="font-size: 0.65rem; opacity: 0.8;">Toutes les taches</small></div>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-2 mb-3">
-        <a href="{{ url_for('task.list_tasks') }}" class="card bg-danger text-white text-decoration-none" title="Taches en attente de traitement ou assignation">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ stats.pending_tasks }}</h3>
-                <small>En attente</small>
-                <div class="mt-1"><small style="font-size: 0.65rem; opacity: 0.8;">A traiter / assigner</small></div>
-            </div>
-        </a>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-value" style="color: var(--color-danger);">{{ stats.pending_tasks }}</div>
+            <div class="stat-card-label">En attente</div>
+        </div>
     </div>
 </div>
 
-<!-- Actions rapides -->
-<div class="row mb-4">
-    <div class="col-md-4 mb-3">
+<!-- Actions -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
         <a href="{{ url_for('admin.users') }}" class="card text-decoration-none h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="bi bi-people-fill text-primary me-3" style="font-size: 2rem;"></i>
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-people text-primary" style="font-size: 1.5rem;"></i>
                 <div>
-                    <h5 class="mb-0">Gestion des utilisateurs</h5>
-                    <small class="text-muted">Creer, modifier, supprimer</small>
+                    <strong>Utilisateurs</strong>
+                    <div class="text-muted small">Gerer les comptes</div>
                 </div>
             </div>
         </a>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4">
         <a href="{{ url_for('admin.logs') }}" class="card text-decoration-none h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="bi bi-journal-text text-info me-3" style="font-size: 2rem;"></i>
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-journal-text text-info" style="font-size: 1.5rem;"></i>
                 <div>
-                    <h5 class="mb-0">Journaux d'activite</h5>
-                    <small class="text-muted">Consulter l'historique</small>
+                    <strong>Journaux</strong>
+                    <div class="text-muted small">Historique d'activite</div>
                 </div>
             </div>
         </a>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4">
         <a href="{{ url_for('admin.backups') }}" class="card text-decoration-none h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="bi bi-cloud-arrow-up-fill text-success me-3" style="font-size: 2rem;"></i>
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-cloud-arrow-up text-success" style="font-size: 1.5rem;"></i>
                 <div>
-                    <h5 class="mb-0">Sauvegardes</h5>
-                    <small class="text-muted">Creer, restaurer</small>
+                    <strong>Sauvegardes</strong>
+                    <div class="text-muted small">Creer et restaurer</div>
                 </div>
             </div>
         </a>
     </div>
 </div>
 
-<div class="row">
-    <!-- Utilisateurs recents -->
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-person-plus me-2"></i>Derniers utilisateurs inscrits
-            </div>
-            <div class="card-body">
-                {% if recent_users %}
-                <div class="list-group list-group-flush">
-                    {% for user in recent_users %}
-                    <a href="{{ url_for('admin.view_user', user_id=user.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-person me-2"></i>{{ user.full_name }}
-                                <br><small class="text-muted">{{ user.email }}</small>
-                            </div>
-                            <span class="badge bg-{{ 'success' if user.is_active else 'secondary' }}">
-                                {{ 'Actif' if user.is_active else 'Inactif' }}
-                            </span>
-                        </div>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted mb-0 text-center">Aucun utilisateur recent</p>
-                {% endif %}
-            </div>
-        </div>
+<!-- Activite recente -->
+{% if recent_logs %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Activite recente</span>
+        <a href="{{ url_for('admin.logs') }}" class="btn btn-sm btn-link">Voir tout</a>
     </div>
-
-    <!-- Activite recente -->
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-clock-history me-2"></i>Activite recente
-            </div>
-            <div class="card-body">
-                {% if recent_logs %}
-                <div class="list-group list-group-flush">
-                    {% for log in recent_logs[:10] %}
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between">
-                            <span>
-                                <small class="text-muted">{{ log.user.username }}</small> -
-                                {{ log.action_label }}
-                            </span>
-                            <small class="text-muted">{{ log.created_at.strftime('%H:%M') }}</small>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted mb-0 text-center">Aucune activite</p>
-                {% endif %}
-            </div>
+    <div class="list-group list-group-flush">
+        {% for log in recent_logs[:8] %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+                <span class="text-muted">{{ log.user.username }}</span> — {{ log.action_label }}
+            </span>
+            <small class="text-muted">{{ log.created_at.strftime('%d/%m %H:%M') }}</small>
         </div>
+        {% endfor %}
     </div>
 </div>
+{% endif %}
 {% endblock %}

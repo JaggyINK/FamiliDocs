@@ -5,13 +5,17 @@
 {% block content %}
 {% if pending_invite %}
 <div class="alert alert-success mb-3" style="max-width: 420px;">
-    <strong>Invitation en attente</strong><br>
     Connectez-vous pour rejoindre <strong>{{ pending_invite.family_name }}</strong>
-    en tant que <span class="badge bg-secondary">{{ pending_invite.role }}</span>
 </div>
 {% endif %}
 
 <div class="auth-card login">
+    <!-- Logo gradient -->
+    <div class="text-center mb-4">
+        <div style="width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #007AFF, #5856D6); display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.25);">
+            <span style="color: #fff; font-weight: 700; font-size: 1.2rem;">FD</span>
+        </div>
+    </div>
     <h1 class="auth-title">FamiliDocs</h1>
     <p class="auth-subtitle">Connexion a votre compte</p>
 
@@ -30,7 +34,7 @@
 
         <div class="mb-3 form-check">
             <input type="checkbox" class="form-check-input" id="remember" name="remember">
-            <label class="form-check-label" for="remember">Se souvenir de moi</label>
+            <label class="form-check-label" for="remember" style="font-size: 0.85rem;">Se souvenir de moi</label>
         </div>
 
         <button type="submit" class="btn btn-primary w-100">Se connecter</button>

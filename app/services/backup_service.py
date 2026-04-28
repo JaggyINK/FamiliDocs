@@ -1,6 +1,4 @@
-"""
-Service de sauvegarde et restauration
-"""
+# service backup restauration
 import os
 import shutil
 import json
@@ -13,11 +11,11 @@ from app.models.log import Log
 
 
 class BackupService:
-    """Service pour la sauvegarde et restauration des données"""
+    """backup + restore bdd"""
 
     @staticmethod
     def get_backup_folder() -> str:
-        """Récupère le dossier de sauvegarde"""
+        """recup dossier backup"""
         backup_folder = current_app.config.get('BACKUP_FOLDER')
         if not os.path.exists(backup_folder):
             os.makedirs(backup_folder)
@@ -25,13 +23,13 @@ class BackupService:
 
     @staticmethod
     def _is_postgresql():
-        """Detecte si la BDD est PostgreSQL"""
+        """check si postgresql"""
         db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
         return db_uri.startswith('postgresql')
 
     @staticmethod
     def _export_table(model):
-        """Exporte une table SQLAlchemy en liste de dictionnaires"""
+        """export table en dict"""
         from sqlalchemy import inspect
 
         table_name = model.__tablename__
@@ -61,7 +59,7 @@ class BackupService:
 
     @staticmethod
     def _export_db_to_json(backup_path):
-        """Exporte toutes les tables via SQLAlchemy en JSON (pour PostgreSQL)"""
+        """export bdd JSON (postgresql)"""
         from app.models import (User, Folder, Document, Permission, Task,
                                 Log, Notification, DocumentVersion, Tag,
                                 Family, FamilyMember, ShareLink, Message)
@@ -91,38 +89,30 @@ class BackupService:
 
     @staticmethod
     def create_backup(user_id: int = None, include_files: bool = True) -> tuple:
-        """
-        Crée une sauvegarde complète
-        Retourne (success, backup_path_or_error)
-        """
+        """cree backup complet (bdd + fichiers)"""
         try:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_folder = BackupService.get_backup_folder()
             backup_name = f"familidocs_backup_{timestamp}"
             backup_path = os.path.join(backup_folder, backup_name)
-
-            # Création du dossier temporaire de sauvegarde
             os.makedirs(backup_path, exist_ok=True)
 
-            # Sauvegarde de la base de données
+            # bdd : export JSON
             if BackupService._is_postgresql():
-                # PostgreSQL : export JSON via SQLAlchemy
                 BackupService._export_db_to_json(backup_path)
             else:
-                # SQLite : copie du fichier .db
                 db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
                 db_path = db_uri.replace('sqlite:///', '') if db_uri.startswith('sqlite:///') else ''
                 if os.path.exists(db_path):
                     shutil.copy2(db_path, os.path.join(backup_path, 'familidocs.db'))
 
-            # Sauvegarde des fichiers uploadés
+            # fichiers uploades
             if include_files:
                 upload_folder = current_app.config.get('UPLOAD_FOLDER')
                 if os.path.exists(upload_folder):
-                    files_backup = os.path.join(backup_path, 'uploads')
-                    shutil.copytree(upload_folder, files_backup)
+                    shutil.copytree(upload_folder, os.path.join(backup_path, 'uploads'))
 
-            # Métadonnées de la sauvegarde
+            # metadata
             metadata = {
                 'created_at': datetime.now().isoformat(),
                 'created_by': user_id,
@@ -133,7 +123,7 @@ class BackupService:
             with open(os.path.join(backup_path, 'metadata.json'), 'w') as f:
                 json.dump(metadata, f, indent=2)
 
-            # Création de l'archive ZIP
+            # zip
             zip_path = f"{backup_path}.zip"
             with ZipFile(zip_path, 'w') as zipf:
                 for root, dirs, files in os.walk(backup_path):
@@ -142,26 +132,24 @@ class BackupService:
                         arcname = os.path.relpath(file_path, backup_path)
                         zipf.write(file_path, arcname)
 
-            # Nettoyage du dossier temporaire
             shutil.rmtree(backup_path)
 
-            # Log de l'action
             if user_id:
                 Log.create_log(
                     user_id=user_id,
                     action='backup_create',
-                    details=f"Sauvegarde créée: {os.path.basename(zip_path)}"
+                    details=f"Sauvegarde creee: {os.path.basename(zip_path)}"
                 )
                 db.session.commit()
 
             return True, zip_path
 
         except Exception as e:
-            return False, f"Erreur lors de la sauvegarde: {str(e)}"
+            return False, f"Erreur sauvegarde: {e}"
 
     @staticmethod
     def _restore_db_from_json(extract_path):
-        """Restaure la BDD PostgreSQL depuis un export JSON"""
+        """restore bdd depuis JSON"""
         from app.models import (User, Folder, Document, Permission, Task,
                                 Log, Notification, DocumentVersion, Tag,
                                 Family, FamilyMember, ShareLink, Message)
@@ -211,10 +199,7 @@ class BackupService:
 
     @staticmethod
     def restore_backup(backup_path: str, user_id: int = None) -> tuple:
-        """
-        Restaure une sauvegarde
-        Retourne (success, message)
-        """
+        """restaure backup"""
         if not os.path.exists(backup_path):
             return False, "Fichier de sauvegarde introuvable"
 
@@ -229,50 +214,41 @@ class BackupService:
             return False, "Chemin de sauvegarde invalide"
 
         try:
-            # Dossier temporaire d'extraction
             extract_path = backup_path.replace('.zip', '_extract')
             os.makedirs(extract_path, exist_ok=True)
 
-            # Validation et extraction securisee de l'archive (protection Zip Slip)
+            # extraction securisee (anti zip slip)
             with ZipFile(backup_path, 'r') as zipf:
                 for member in zipf.namelist():
                     member_path = os.path.realpath(os.path.join(extract_path, member))
                     if not member_path.startswith(os.path.realpath(extract_path) + os.sep):
                         shutil.rmtree(extract_path, ignore_errors=True)
-                        return False, "Archive invalide : chemin suspect detecte"
+                        return False, "Archive invalide : chemin suspect"
                 zipf.extractall(extract_path)
 
-            # Vérification des métadonnées
             metadata_path = os.path.join(extract_path, 'metadata.json')
             if not os.path.exists(metadata_path):
                 shutil.rmtree(extract_path)
-                return False, "Sauvegarde invalide: métadonnées manquantes"
+                return False, "Sauvegarde invalide: metadonnees manquantes"
 
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
-
-            # Restauration de la base de données
+            # restore bdd
             if BackupService._is_postgresql():
-                # PostgreSQL : import depuis JSON
                 success, msg = BackupService._restore_db_from_json(extract_path)
                 if not success:
                     shutil.rmtree(extract_path)
                     return False, msg
             else:
-                # SQLite : copie du fichier .db
                 db_backup = os.path.join(extract_path, 'familidocs.db')
                 if os.path.exists(db_backup):
-                    db_dest = os.path.normpath(
-                        os.path.join(
-                            os.path.dirname(current_app.config.get('UPLOAD_FOLDER', '')),
-                            'familidocs.db'
-                        )
-                    )
+                    db_dest = os.path.normpath(os.path.join(
+                        os.path.dirname(current_app.config.get('UPLOAD_FOLDER', '')),
+                        'familidocs.db'
+                    ))
                     if os.path.exists(db_dest):
                         shutil.copy2(db_dest, db_dest + '.before_restore')
                     shutil.copy2(db_backup, db_dest)
 
-            # Restauration des fichiers
+            # restore fichiers
             uploads_backup = os.path.join(extract_path, 'uploads')
             if os.path.exists(uploads_backup):
                 upload_folder = current_app.config.get('UPLOAD_FOLDER')
@@ -280,10 +256,8 @@ class BackupService:
                     shutil.move(upload_folder, upload_folder + '.before_restore')
                 shutil.copytree(uploads_backup, upload_folder)
 
-            # Nettoyage
             shutil.rmtree(extract_path)
 
-            # Log de l'action
             if user_id:
                 Log.create_log(
                     user_id=user_id,
@@ -292,17 +266,16 @@ class BackupService:
                 )
                 db.session.commit()
 
-            return True, "Restauration effectuée avec succès"
+            return True, "Restauration OK"
 
         except Exception as e:
-            # Nettoyage en cas d'erreur
             if 'extract_path' in locals() and os.path.exists(extract_path):
                 shutil.rmtree(extract_path, ignore_errors=True)
-            return False, f"Erreur lors de la restauration: {str(e)}"
+            return False, f"Erreur restauration: {e}"
 
     @staticmethod
     def list_backups() -> list:
-        """Liste toutes les sauvegardes disponibles"""
+        """liste backups dispo"""
         backup_folder = BackupService.get_backup_folder()
         backups = []
 
@@ -317,16 +290,13 @@ class BackupService:
                     'created_at': datetime.fromtimestamp(stat.st_mtime)
                 })
 
-        # Tri par date décroissante
+        # tri par date desc
         backups.sort(key=lambda x: x['created_at'], reverse=True)
         return backups
 
     @staticmethod
     def delete_backup(backup_path: str) -> tuple:
-        """
-        Supprime une sauvegarde
-        Retourne (success, message)
-        """
+        """suppr backup"""
         if not os.path.exists(backup_path):
             return False, "Sauvegarde introuvable"
 
@@ -339,48 +309,13 @@ class BackupService:
 
         try:
             os.remove(backup_path)
-            return True, "Sauvegarde supprimée"
+            return True, "Sauvegarde supprimee"
         except Exception as e:
-            return False, f"Erreur lors de la suppression: {str(e)}"
-
-    @staticmethod
-    def get_backup_size(backup_path: str) -> str:
-        """Retourne la taille d'une sauvegarde en format lisible"""
-        if not os.path.exists(backup_path):
-            return "Inconnu"
-
-        size = os.path.getsize(backup_path)
-        for unit in ['o', 'Ko', 'Mo', 'Go']:
-            if size < 1024:
-                return f"{size:.1f} {unit}"
-            size /= 1024
-        return f"{size:.1f} To"
-
-    @staticmethod
-    def cleanup_old_backups(keep_count: int = 10) -> int:
-        """
-        Supprime les anciennes sauvegardes en gardant les plus récentes
-        Retourne le nombre de sauvegardes supprimées
-        """
-        backups = BackupService.list_backups()
-
-        if len(backups) <= keep_count:
-            return 0
-
-        deleted = 0
-        for backup in backups[keep_count:]:
-            success, _ = BackupService.delete_backup(backup['path'])
-            if success:
-                deleted += 1
-
-        return deleted
+            return False, f"Erreur suppression: {e}"
 
     @staticmethod
     def export_user_data(user_id: int) -> tuple:
-        """
-        Exporte les données d'un utilisateur (RGPD)
-        Retourne (success, data_or_error)
-        """
+        """export data user RGPD"""
         from app.models.user import User
         from app.models.document import Document
         from app.models.folder import Folder
@@ -391,7 +326,7 @@ class BackupService:
             if not user:
                 return False, "Utilisateur introuvable"
 
-            # Collecte des données
+            # collecte data
             data = {
                 'user': {
                     'email': user.email,
@@ -434,4 +369,4 @@ class BackupService:
             return True, data
 
         except Exception as e:
-            return False, f"Erreur lors de l'export: {str(e)}"
+            return False, f"Erreur export: {e}"

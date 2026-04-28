@@ -1,6 +1,4 @@
-"""
-Service de gestion des permissions
-"""
+# service perm acces
 from datetime import date
 from flask import request, has_request_context
 
@@ -12,18 +10,14 @@ from app.models.log import Log
 
 
 class PermissionService:
-    """Service pour la gestion des permissions d'accès aux documents"""
+    """gest perm docs"""
 
     @staticmethod
     def grant_permission(document_id: int, user_id: int, granted_by: int,
                          can_edit: bool = False, can_download: bool = True,
                          can_share: bool = False, end_date: date = None,
                          notes: str = None) -> tuple:
-        """
-        Accorde une permission d'accès à un document
-        Retourne (success, permission_or_error_message)
-        """
-        # Vérifications
+        """accorde perm acces doc"""
         document = Document.query.get(document_id)
         if not document:
             return False, "Document introuvable"
@@ -36,7 +30,7 @@ class PermissionService:
         if not granter:
             return False, "Utilisateur accordant la permission introuvable"
 
-        # Vérifier que l'utilisateur qui accorde est propriétaire ou admin
+        # verif proprio ou admin
         if document.owner_id != granted_by and not granter.is_admin():
             # Vérifier si l'utilisateur a le droit de partager
             existing_perm = Permission.query.filter_by(
@@ -61,7 +55,7 @@ class PermissionService:
             db.session.add(permission)
             db.session.commit()
 
-            # Log de l'action
+            # log
             Log.create_log(
                 user_id=granted_by,
                 action='permission_grant',
@@ -75,14 +69,11 @@ class PermissionService:
 
         except Exception as e:
             db.session.rollback()
-            return False, f"Erreur lors de l'attribution de la permission: {str(e)}"
+            return False, f"Erreur permission: {e}"
 
     @staticmethod
     def revoke_permission(document_id: int, user_id: int, revoked_by: int) -> tuple:
-        """
-        Révoque une permission d'accès
-        Retourne (success, message)
-        """
+        """revoque perm"""
         document = Document.query.get(document_id)
         if not document:
             return False, "Document introuvable"
@@ -95,7 +86,7 @@ class PermissionService:
         if not revoker:
             return False, "Utilisateur révoquant la permission introuvable"
 
-        # Vérifier les droits de révocation
+        # check droits revocation
         if document.owner_id != revoked_by and not revoker.is_admin():
             return False, "Vous n'avez pas le droit de révoquer cette permission"
 
@@ -111,22 +102,19 @@ class PermissionService:
                     ip_address=request.remote_addr if has_request_context() else None
                 )
                 db.session.commit()
-                return True, "Permission révoquée avec succès"
+                return True, "Permission revoquee"
             else:
                 return False, "Permission introuvable"
 
         except Exception as e:
             db.session.rollback()
-            return False, f"Erreur lors de la révocation: {str(e)}"
+            return False, f"Erreur revocation: {e}"
 
     @staticmethod
     def update_permission(permission_id: int, updated_by: int,
                           can_edit: bool = None, can_download: bool = None,
                           can_share: bool = None, end_date: date = None) -> tuple:
-        """
-        Met à jour une permission
-        Retourne (success, message)
-        """
+        """maj perm"""
         permission = Permission.query.get(permission_id)
         if not permission:
             return False, "Permission introuvable"
@@ -148,33 +136,30 @@ class PermissionService:
                 permission.end_date = end_date
 
             db.session.commit()
-            return True, "Permission mise à jour avec succès"
+            return True, "Permission mise a jour"
 
         except Exception as e:
             db.session.rollback()
-            return False, f"Erreur lors de la mise à jour: {str(e)}"
+            return False, f"Erreur mise a jour: {e}"
 
     @staticmethod
     def get_document_permissions(document_id: int):
-        """Récupère toutes les permissions d'un document"""
+        """recup perm doc"""
         return Permission.query.filter_by(document_id=document_id).all()
 
     @staticmethod
     def get_user_permissions(user_id: int):
-        """Récupère toutes les permissions accordées à un utilisateur"""
+        """recup perm user"""
         return Permission.query.filter_by(user_id=user_id).all()
 
     @staticmethod
     def get_granted_permissions(user_id: int):
-        """Récupère toutes les permissions accordées par un utilisateur"""
+        """recup perm accordees par user"""
         return Permission.query.filter_by(granted_by=user_id).all()
 
     @staticmethod
     def check_permission(document_id: int, user_id: int, permission_type: str = 'view') -> bool:
-        """
-        Vérifie si un utilisateur a une permission spécifique sur un document
-        permission_type: 'view', 'edit', 'download', 'share'
-        """
+        """check perm user sur doc"""
         document = Document.query.get(document_id)
         if not document:
             return False
@@ -183,15 +168,15 @@ class PermissionService:
         if not user:
             return False
 
-        # Propriétaire a tous les droits
+        # proprio = tous droits
         if document.owner_id == user_id:
             return True
 
-        # Admin a tous les droits
+        # admin = tous droits
         if user.is_admin():
             return True
 
-        # Vérifier la permission explicite
+        # verif perm explicite
         permission = Permission.query.filter_by(
             document_id=document_id,
             user_id=user_id
@@ -200,7 +185,7 @@ class PermissionService:
         if not permission or not permission.is_valid():
             return False
 
-        # Verifier le type de permission demande
+        # check type perm
         if permission_type == 'view':
             return permission.can_view
         elif permission_type == 'edit':
@@ -214,7 +199,7 @@ class PermissionService:
 
     @staticmethod
     def get_accessible_users_for_sharing(owner_id: int, document_id: int = None):
-        """Récupère les utilisateurs avec qui on peut partager (exclut soi-même et ceux qui ont déjà accès)"""
+        """recup users dispo pr partage"""
         from app.models.family import FamilyMember
 
         # Récupérer les IDs des utilisateurs à exclure
@@ -233,7 +218,7 @@ class PermissionService:
 
     @staticmethod
     def get_family_members_for_sharing(owner_id: int, document_id: int = None):
-        """Récupère les membres de famille avec qui on peut partager"""
+        """recup membres famille pr partage"""
         from app.models.family import FamilyMember, Family
 
         # Trouver les familles de l'utilisateur
@@ -275,7 +260,7 @@ class PermissionService:
                                    can_edit: bool = False, can_download: bool = True,
                                    can_share: bool = False, end_date: date = None,
                                    notes: str = None) -> tuple:
-        """Accorde une permission à plusieurs utilisateurs en une fois"""
+        """perm multiple users"""
         from datetime import timedelta
 
         document = Document.query.get(document_id)
@@ -319,7 +304,7 @@ class PermissionService:
     def share_folder(folder_id: int, user_ids: list, granted_by: int,
                      can_edit: bool = False, can_download: bool = True,
                      can_share: bool = False, end_date: date = None) -> tuple:
-        """Partage tous les documents d'un dossier avec plusieurs utilisateurs"""
+        """partage tous docs dossier"""
         from app.models.folder import Folder
 
         folder = Folder.query.get(folder_id)
@@ -353,7 +338,7 @@ class PermissionService:
 
     @staticmethod
     def revoke_all_permissions_for_user(user_id: int, revoked_by: int = None) -> int:
-        """Révoque toutes les permissions d'un utilisateur (utilisé quand il quitte une famille)"""
+        """revoque toutes perm user (quitte famille)"""
         permissions = Permission.query.filter_by(user_id=user_id).all()
         count = 0
         for perm in permissions:
@@ -364,7 +349,7 @@ class PermissionService:
 
     @staticmethod
     def get_documents_shared_by_user(user_id: int):
-        """Récupère les documents que l'utilisateur a partagés avec d'autres"""
+        """recup docs partages par user"""
         # Recuperer tous les documents de l'utilisateur
         my_documents = Document.query.filter_by(owner_id=user_id).all()
 
@@ -381,7 +366,7 @@ class PermissionService:
 
     @staticmethod
     def cleanup_expired_permissions():
-        """Nettoie les permissions expirées (tâche de maintenance)"""
+        """cleanup perm expirees"""
         today = date.today()
         expired = Permission.query.filter(
             Permission.end_date < today

@@ -1,6 +1,4 @@
-"""
-Modèle Log - Journalisation des actions
-"""
+# modele logs actions
 import logging
 from datetime import datetime, timedelta
 from . import db
@@ -8,41 +6,37 @@ from . import db
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# RGPD / CNIL - Duree de conservation des logs
+# RGPD / CNIL - duree conservation logs
 # ============================================================================
-# Configurable via variable d'environnement, 7 jours par defaut (dev), 180 en production
+# configurable via env, 7j par defaut (dev), 180 en prod
 import os
-LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '7'))
+LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '180'))
 
-# --- PRODUCTION : decommenter la ligne ci-dessous et commenter celle du dessus ---
-# Normes RGPD/CNIL :
-# - Logs de connexion (login/logout/login_failed) : 6 mois (art. L34-1 CPCE)
-# - Logs d'activite utilisateur (document_*, task_*, folder_*) : 12 mois max
-# - Logs d'administration (user_*, permission_*, backup_*) : 12 mois max
-# En production, utiliser la valeur la plus courte necessaire :
-# LOG_RETENTION_DAYS = 180  # 6 mois (CNIL recommandation standard)
+# --- PRODUCTION : decommenter ci-dessous ---
+# RGPD/CNIL :
+# - Logs connextion (login/logout/login_failed) : 6 mois (art. L34-1 CPCE)
+# - Logs activite user (document_*, task_*, folder_*) : 12 mois max
+# - Logs admin (user_*, permission_*, backup_*) : 12 mois max
+# LOG_RETENTION_DAYS = 180  # 6 mois
 # ============================================================================
 
 
 class Log(db.Model):
-    """Modèle représentant une entrée de journal"""
+    """entree journal"""
 
     __tablename__ = 'logs'
 
     id = db.Column(db.Integer, primary_key=True)
     action = db.Column(db.String(50), nullable=False, index=True)
     details = db.Column(db.Text)
-    ip_address = db.Column(db.String(45))  # Support IPv6
+    ip_address = db.Column(db.String(45))  # IPv6
     user_agent = db.Column(db.String(255))
 
-    # Relations
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=True, index=True)
 
-    # Timestamp
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
-    # Types d'actions disponibles
     ACTION_TYPES = {
         'login': 'Connexion',
         'logout': 'Déconnexion',
@@ -55,9 +49,13 @@ class Log(db.Model):
         'document_share': 'Partage document',
         'permission_grant': 'Attribution permission',
         'permission_revoke': 'Révocation permission',
+        'permission_update': 'Mise à jour permission',
         'user_create': 'Création utilisateur',
         'user_edit': 'Modification utilisateur',
         'user_delete': 'Suppression utilisateur',
+        'profile_update': 'Mise à jour profil',
+        'avatar_upload': 'Upload avatar',
+        'avatar_delete': 'Suppression avatar',
         'folder_create': 'Création dossier',
         'folder_edit': 'Modification dossier',
         'folder_delete': 'Suppression dossier',
@@ -74,13 +72,13 @@ class Log(db.Model):
 
     @property
     def action_label(self):
-        """Retourne le libellé de l'action"""
+        """label action"""
         return self.ACTION_TYPES.get(self.action, self.action)
 
     @staticmethod
     def create_log(user_id, action, document_id=None, details=None,
                    ip_address=None, user_agent=None):
-        """Crée une nouvelle entrée de journal"""
+        """cree entree log"""
         log = Log(
             user_id=user_id,
             action=action,
@@ -94,7 +92,7 @@ class Log(db.Model):
 
     @staticmethod
     def get_user_logs(user_id, limit=100):
-        """Récupère les derniers logs d'un utilisateur"""
+        """recup logs user"""
         return Log.query.filter_by(user_id=user_id)\
             .order_by(Log.created_at.desc())\
             .limit(limit)\
@@ -102,7 +100,7 @@ class Log(db.Model):
 
     @staticmethod
     def get_document_logs(document_id, limit=50):
-        """Récupère les derniers logs d'un document"""
+        """recup logs doc"""
         return Log.query.filter_by(document_id=document_id)\
             .order_by(Log.created_at.desc())\
             .limit(limit)\
@@ -110,33 +108,14 @@ class Log(db.Model):
 
     @staticmethod
     def get_recent_logs(limit=100):
-        """Récupère les derniers logs (admin)"""
+        """recup derniers logs (admin)"""
         return Log.query.order_by(Log.created_at.desc())\
             .limit(limit)\
             .all()
 
     @staticmethod
-    def get_logs_by_action(action, limit=100):
-        """Récupère les logs par type d'action"""
-        return Log.query.filter_by(action=action)\
-            .order_by(Log.created_at.desc())\
-            .limit(limit)\
-            .all()
-
-    @staticmethod
-    def get_logs_between_dates(start_date, end_date):
-        """Récupère les logs entre deux dates"""
-        return Log.query.filter(
-            Log.created_at >= start_date,
-            Log.created_at <= end_date
-        ).order_by(Log.created_at.desc()).all()
-
-    @staticmethod
     def cleanup_old_logs(retention_days=None):
-        """
-        Supprime les logs plus anciens que la duree de retention (RGPD).
-        Retourne le nombre de logs supprimes.
-        """
+        """supprime vieux logs (RGPD)"""
         if retention_days is None:
             retention_days = LOG_RETENTION_DAYS
         cutoff_date = datetime.utcnow() - timedelta(days=retention_days)

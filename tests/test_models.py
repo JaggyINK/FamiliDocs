@@ -391,7 +391,7 @@ class TestFamilyModel:
     def test_get_member_role(self, test_family, test_user):
         """Role d'un membre"""
         role = test_family.get_member_role(test_user.id)
-        assert role == 'chef_famille'
+        assert role == 'responsable'
 
     def test_get_member_role_none(self, test_family, second_user):
         """Pas de role si pas membre"""
@@ -411,7 +411,7 @@ class TestFamilyMemberModel:
 
     def test_roles_defined(self):
         """Les roles sont definis"""
-        assert 'chef_famille' in FamilyMember.ROLES
+        assert 'responsable' in FamilyMember.ROLES
         assert 'lecteur' in FamilyMember.ROLES
         assert len(FamilyMember.ROLES) == 8
 

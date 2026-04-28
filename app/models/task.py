@@ -1,12 +1,10 @@
-"""
-Modèle Task - Gestion des tâches et échéances
-"""
+# modele taches echeances
 from datetime import datetime, date, timedelta
 from . import db
 
 
 class Task(db.Model):
-    """Modèle représentant une tâche ou échéance"""
+    """table taches"""
 
     __tablename__ = 'tasks'
 
@@ -16,18 +14,15 @@ class Task(db.Model):
     due_date = db.Column(db.Date, nullable=False)
     priority = db.Column(db.String(20), default='normal')  # low, normal, high, urgent
     status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, cancelled
-    reminder_days = db.Column(db.Integer, default=7)  # Jours avant l'échéance pour le rappel
+    reminder_days = db.Column(db.Integer, default=7)
 
-    # Relations
-    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=True)
-    assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
 
-    # Relation pour l'assignation
     assigned_to = db.relationship('User', foreign_keys=[assigned_to_id],
                                    backref=db.backref('assigned_tasks', lazy='dynamic'))
 
-    # Métadonnées
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
@@ -37,27 +32,27 @@ class Task(db.Model):
 
     @property
     def is_overdue(self):
-        """Vérifie si la tâche est en retard"""
+        """tache en retard ?"""
         if self.status in ['completed', 'cancelled']:
             return False
         return self.due_date < date.today()
 
     @property
     def is_due_soon(self):
-        """Vérifie si la tâche arrive à échéance bientôt"""
+        """echeance bientot ?"""
         if self.status in ['completed', 'cancelled']:
             return False
         return date.today() <= self.due_date <= date.today() + timedelta(days=self.reminder_days)
 
     @property
     def days_until_due(self):
-        """Retourne le nombre de jours avant l'échéance"""
+        """jours restants"""
         delta = self.due_date - date.today()
         return delta.days
 
     @property
     def priority_color(self):
-        """Retourne la couleur associée à la priorité"""
+        """couleur priorite"""
         colors = {
             'low': 'secondary',
             'normal': 'primary',
@@ -68,7 +63,7 @@ class Task(db.Model):
 
     @property
     def status_color(self):
-        """Retourne la couleur associée au statut"""
+        """couleur statut"""
         colors = {
             'pending': 'secondary',
             'in_progress': 'info',
@@ -78,21 +73,21 @@ class Task(db.Model):
         return colors.get(self.status, 'secondary')
 
     def mark_completed(self):
-        """Marque la tâche comme terminée"""
+        """marque terminee"""
         self.status = 'completed'
         self.completed_at = datetime.utcnow()
 
     def mark_in_progress(self):
-        """Marque la tâche comme en cours"""
+        """marque en cours"""
         self.status = 'in_progress'
 
     def mark_cancelled(self):
-        """Marque la tâche comme annulée"""
+        """marque annulee"""
         self.status = 'cancelled'
 
     @staticmethod
     def get_upcoming_tasks(user_id, days=30):
-        """Récupère les tâches à venir pour un utilisateur"""
+        """recup taches a venir"""
         from sqlalchemy import and_
         end_date = date.today() + timedelta(days=days)
         return Task.query.filter(
@@ -105,7 +100,7 @@ class Task(db.Model):
 
     @staticmethod
     def get_overdue_tasks(user_id):
-        """Récupère les tâches en retard pour un utilisateur"""
+        """recup taches en retard"""
         return Task.query.filter(
             Task.owner_id == user_id,
             Task.due_date < date.today(),
@@ -114,7 +109,7 @@ class Task(db.Model):
 
     @staticmethod
     def create_from_document(document, title=None, due_date=None, owner_id=None):
-        """Crée une tâche à partir d'un document"""
+        """cree tache depuis un doc"""
         if not due_date and document.expiry_date:
             due_date = document.expiry_date
 
@@ -132,7 +127,7 @@ class Task(db.Model):
 
     @staticmethod
     def get_assigned_tasks(user_id):
-        """Récupère les tâches assignées à un utilisateur"""
+        """recup taches assignees"""
         return Task.query.filter(
             Task.assigned_to_id == user_id,
             Task.status.notin_(['completed', 'cancelled'])
@@ -140,7 +135,7 @@ class Task(db.Model):
 
     @staticmethod
     def get_family_members_for_assignment(user_id):
-        """Récupère les membres de famille pour l'assignation de tâches"""
+        """recup membres famille pr assignation"""
         from app.models.family import FamilyMember
 
         memberships = FamilyMember.query.filter_by(user_id=user_id).all()
@@ -155,7 +150,7 @@ class Task(db.Model):
             FamilyMember.family_id.in_(family_ids)
         ).all()
 
-        # Retourner les utilisateurs uniques avec leur famille
+        # users uniques avec leur famille
         seen = set()
         result = []
         for m in members:

@@ -155,7 +155,7 @@ def test_family(app, test_user):
     member = FamilyMember(
         family_id=family.id,
         user_id=test_user.id,
-        role='chef_famille'
+        role='responsable'
     )
     _db.session.add(member)
     _db.session.commit()

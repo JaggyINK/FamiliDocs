@@ -56,6 +56,14 @@ Creer un service informatique securise permettant :
 - Association tache/document
 - Rappels automatiques
 - Vue liste et calendrier
+- Assignation entre membres de la famille
+- Dashboard taches famille avec progression et recommandations
+
+### 4.8 Application desktop native
+- Interface CustomTkinter (meme BDD PostgreSQL que la version web)
+- Documents, dossiers en grille, partages avec droits et duree
+- Taches avec assignation, chat familial, gestion utilisateurs
+- Executable autonome via PyInstaller
 
 ### 4.6 Journalisation
 - Historique complet des actions
@@ -70,9 +78,9 @@ Creer un service informatique securise permettant :
 
 ### 5.1 Technologies
 - **Backend** : Python 3.x, Flask
-- **Base de donnees** : SQLite
+- **Base de donnees** : PostgreSQL 16
 - **Frontend** : HTML5, CSS3, Bootstrap 5, JavaScript
-- **Securite** : bcrypt, cryptography
+- **Securite** : bcrypt, cryptography, pyotp (2FA), Content-Security-Policy
 
 ### 5.2 Structure du projet
 ```
@@ -93,12 +101,16 @@ familidocs/
 
 ## 6. Securite
 
-- Hashage des mots de passe (bcrypt)
+- Hashage des mots de passe (bcrypt) avec validation de complexite
+- Authentification a deux facteurs (2FA/TOTP)
 - Chiffrement des documents sensibles (AES)
-- Gestion des sessions securisee
-- Controle d'acces strict
-- Protection CSRF
-- Validation des entrees
+- Gestion des sessions securisee (HttpOnly, SameSite, Secure)
+- Controle d'acces strict avec roles hierarchiques
+- Protection CSRF (Flask-WTF)
+- En-tetes HTTP de securite (CSP, HSTS, X-Frame-Options, etc.)
+- Validation des entrees et du content-type des fichiers
+- Protection path traversal
+- Conformite RGPD (retention logs 180j, export donnees, suppression compte)
 
 ## 7. Base de donnees
 
@@ -113,7 +125,7 @@ familidocs/
 ## 8. Livrables BTS
 
 - Code source commente
-- Base de donnees SQLite
+- Base de donnees PostgreSQL
 - Cahier des charges
 - Documentation technique
 - Documentation utilisateur

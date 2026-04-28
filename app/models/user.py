@@ -1,13 +1,11 @@
-"""
-Modèle Utilisateur - Gestion des comptes utilisateurs
-"""
+# modele utilisatuer
 from datetime import datetime
 from flask_login import UserMixin
 from . import db
 
 
 class User(UserMixin, db.Model):
-    """Modèle représentant un utilisateur de l'application"""
+    """table users"""
 
     __tablename__ = 'users'
 
@@ -23,25 +21,32 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
-    # N3 - Photo de profil (chemin vers le fichier)
+    # photo profil
     profile_photo = db.Column(db.String(255), nullable=True)
-    # N4 - Titre/Role familial personnalise (Papa, Maman, Fils, etc.)
+    # titre familial custom
     family_title = db.Column(db.String(50), nullable=True)
 
-    # Relations
-    folders = db.relationship('Folder', backref='owner', lazy='dynamic',
-                              foreign_keys='Folder.owner_id')
-    documents = db.relationship('Document', backref='owner', lazy='dynamic',
-                                foreign_keys='Document.owner_id')
-    tasks = db.relationship('Task', backref='owner', lazy='dynamic',
-                            foreign_keys='Task.owner_id')
-    logs = db.relationship('Log', backref='user', lazy='dynamic')
+    # 2FA TOTP
+    totp_secret = db.Column(db.String(32), nullable=True)
+    is_2fa_enabled = db.Column(db.Boolean, default=False)
 
-    # Permissions accordées à cet utilisateur
+    folders = db.relationship('Folder', backref='owner', lazy='dynamic',
+                              foreign_keys='Folder.owner_id',
+                              cascade='all, delete-orphan')
+    documents = db.relationship('Document', backref='owner', lazy='dynamic',
+                                foreign_keys='Document.owner_id',
+                                cascade='all, delete-orphan')
+    tasks = db.relationship('Task', backref='owner', lazy='dynamic',
+                            foreign_keys='Task.owner_id',
+                            cascade='all, delete-orphan')
+    logs = db.relationship('Log', backref='user', lazy='dynamic',
+                           cascade='all, delete-orphan')
+
+    # perm recues
     permissions_received = db.relationship('Permission', backref='granted_user',
                                            lazy='dynamic',
                                            foreign_keys='Permission.user_id')
-    # Permissions accordées par cet utilisateur
+    # perm donnees
     permissions_granted = db.relationship('Permission', backref='granting_user',
                                           lazy='dynamic',
                                           foreign_keys='Permission.granted_by')
@@ -51,26 +56,24 @@ class User(UserMixin, db.Model):
 
     @property
     def full_name(self):
-        """Retourne le nom complet de l'utilisateur"""
+        """nom complet"""
         return f'{self.first_name} {self.last_name}'
 
     def is_admin(self):
-        """Vérifie si l'utilisateur est administrateur"""
+        """check admin"""
         return self.role == 'admin'
 
     def is_trusted(self):
-        """Vérifie si l'utilisateur est une personne de confiance"""
+        """check personne de confiance"""
         return self.role == 'trusted'
 
     def can_access_document(self, document):
-        """Vérifie si l'utilisateur peut accéder à un document"""
-        # Propriétaire
+        """verif acces doc"""
         if document.owner_id == self.id:
             return True
-        # Admin
         if self.is_admin():
             return True
-        # Permission explicite
+        # perm explicite
         permission = Permission.query.filter_by(
             document_id=document.id,
             user_id=self.id
@@ -80,7 +83,7 @@ class User(UserMixin, db.Model):
         return False
 
     def can_edit_document(self, document):
-        """Vérifie si l'utilisateur peut modifier un document"""
+        """verif edit doc"""
         if document.owner_id == self.id:
             return True
         if self.is_admin():
@@ -95,25 +98,26 @@ class User(UserMixin, db.Model):
 
     @property
     def display_name(self):
-        """Retourne le nom d'affichage avec le titre familial si defini"""
+        """nom affichage avec titre familial"""
         if self.family_title:
             return f"{self.family_title} ({self.first_name})"
         return self.full_name
 
     @property
     def avatar_url(self):
-        """Retourne l'URL de l'avatar ou un placeholder"""
+        """url avatar ou None"""
         if self.profile_photo:
             return f'/uploads/avatars/{self.profile_photo}'
-        # Placeholder avec initiales
         return None
 
     @property
     def initials(self):
-        """Retourne les initiales de l'utilisateur"""
-        return f"{self.first_name[0]}{self.last_name[0]}".upper()
+        """initiales user"""
+        f = self.first_name[0] if self.first_name else '?'
+        l = self.last_name[0] if self.last_name else '?'
+        return f"{f}{l}".upper()
 
-    # Titres familiaux predefinies
+    # titres familiaux dispo
     FAMILY_TITLES = [
         ('', 'Aucun'),
         ('Papa', 'Papa'),
@@ -130,5 +134,5 @@ class User(UserMixin, db.Model):
     ]
 
 
-# Import ici pour éviter l'import circulaire
+# marche pas sans ca (import circulaire)
 from .permission import Permission

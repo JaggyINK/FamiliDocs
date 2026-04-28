@@ -1,4 +1,4 @@
-""" Service d'authentification - Gestion des connexions et mots de passe """
+# service auth connextion mdp
 import bcrypt
 from datetime import datetime
 from flask import request
@@ -11,22 +11,23 @@ from app.models.folder import Folder
 
 
 class AuthService:
-    """authentification"""
-    # Limite de connexion
+    """auth service"""
     MAX_LOGIN_ATTEMPTS = 5
     LOCKOUT_DURATION = 900  # 15 minutes en secondes
+    # rate limiting en memoire : suffisant pour un projet d'ecole mono-instance
+    # en prod multi-workers il faudrait Redis ou la bdd pour partager le compteur
     _failed_attempts = {}  # {ip: {'count': int, 'last_attempt': datetime}}
 
     @classmethod
     def _check_rate_limit(cls, ip_address):
-        """Verifie si l'IP n'a pas depasse le nombre max de tentatives"""
+        """check rate limit IP"""
         if ip_address not in cls._failed_attempts:
             return True, None
 
         attempt_data = cls._failed_attempts[ip_address]
         elapsed = (datetime.utcnow() - attempt_data['last_attempt']).total_seconds()
 
-        # Reinitialiser apres la periode de blocage
+        # reset apres blocage
         if elapsed > cls.LOCKOUT_DURATION:
             del cls._failed_attempts[ip_address]
             return True, None
@@ -40,7 +41,7 @@ class AuthService:
 
     @classmethod
     def _record_failed_attempt(cls, ip_address):
-        """Enregistre une tentative echouee"""
+        """enregistre tentative echouee"""
         if ip_address not in cls._failed_attempts:
             cls._failed_attempts[ip_address] = {'count': 0, 'last_attempt': datetime.utcnow()}
 
@@ -49,7 +50,7 @@ class AuthService:
 
     @classmethod
     def _clear_failed_attempts(cls, ip_address):
-        """Reinitialise les tentatives pour une IP apres connexion reussie"""
+        """reset tentatives IP"""
         if ip_address in cls._failed_attempts:
             del cls._failed_attempts[ip_address]
 
@@ -69,9 +70,9 @@ class AuthService:
 
     @classmethod
     def authenticate(cls, email: str, password: str) -> tuple:
-        """ Authentifie un utilisateur avec limitation de tentatives. Retourne (success, user_or_error_message) """
+        """auth user avec rate limit"""
         ip_address = request.remote_addr
-        # Verifier la limitation de tentatives
+        # check rate limit
         allowed, error_msg = cls._check_rate_limit(ip_address)
         if not allowed:
             return False, error_msg
@@ -92,26 +93,22 @@ class AuthService:
                 user_agent=request.user_agent.string[:255] if request.user_agent.string else None
             )
             db.session.commit()
-            remaining = cls.MAX_LOGIN_ATTEMPTS - cls._failed_attempts.get(ip_address, {}).get('count', 0)
-            if remaining > 0:
-                return False, f"Email ou mot de passe incorrect ({remaining} tentative(s) restante(s))"
-            else:
-                return False, f"Compte bloque temporairement. Reessayez dans 15 minutes."
-        # Connexion reussie - reinitialiser les tentatives
+            # message identique a "email inexistant" pour ne pas reveler les comptes existants
+            return False, "Email ou mot de passe incorrect"
+        # ok - reset tentatives
         cls._clear_failed_attempts(ip_address)
         return True, user
 
     @staticmethod
     def login(user: User, remember: bool = False) -> bool:
-        """Connecte un utilisateur"""
-        # Mise à jour de la dernière connexion
+        """login user"""
         user.last_login = datetime.utcnow()
         db.session.commit()
 
-        # Connexion via Flask-Login
+        # flask-login
         login_user(user, remember=remember)
 
-        # Log de la connexion
+        # log connextion
         Log.create_log(
             user_id=user.id,
             action='login',
@@ -125,7 +122,7 @@ class AuthService:
 
     @staticmethod
     def logout(user: User):
-        """Déconnecte un utilisateur"""
+        """logout user"""
         if user and user.is_authenticated:
             Log.create_log(
                 user_id=user.id,
@@ -140,24 +137,21 @@ class AuthService:
     @staticmethod
     def register_user(email: str, username: str, password: str,
                       first_name: str, last_name: str, role: str = 'user') -> tuple:
-        """
-        Enregistre un nouvel utilisateur
-        Retourne (success, user_or_error_message)
-        """
-        # Vérification de l'email unique
+        """inscription nouvel user"""
+        # email unique
         if User.query.filter_by(email=email).first():
             return False, "Cet email est déjà utilisé"
 
-        # Vérification du username unique
+        # username unique
         if User.query.filter_by(username=username).first():
             return False, "Ce nom d'utilisateur est déjà utilisé"
 
-        # Validation du mot de passe
+        # validation mdp
         is_valid, message = AuthService.validate_password(password)
         if not is_valid:
             return False, message
 
-        # Création de l'utilisateur
+        # creation user
         user = User(
             email=email,
             username=username,
@@ -170,7 +164,7 @@ class AuthService:
         db.session.add(user)
         db.session.commit()
 
-        # Création des dossiers par défaut
+        # dossiers par defaut
         default_folders = Folder.create_default_folders(user.id)
         for folder in default_folders:
             db.session.add(folder)
@@ -180,10 +174,7 @@ class AuthService:
 
     @staticmethod
     def validate_password(password: str) -> tuple:
-        """
-        Valide la complexité d'un mot de passe
-        Retourne (is_valid, message)
-        """
+        """check complexite mdp"""
         if len(password) < 8:
             return False, "Le mot de passe doit contenir au moins 8 caractères"
 
@@ -203,38 +194,29 @@ class AuthService:
 
     @staticmethod
     def change_password(user: User, old_password: str, new_password: str) -> tuple:
-        """
-        Change le mot de passe d'un utilisateur
-        Retourne (success, message)
-        """
-        # Vérification de l'ancien mot de passe
+        """change mdp user"""
+        # verif ancien mdp
         if not AuthService.verify_password(old_password, user.password_hash):
             return False, "Mot de passe actuel incorrect"
 
-        # Validation du nouveau mot de passe
+        # validation nouveau mdp
         is_valid, message = AuthService.validate_password(new_password)
         if not is_valid:
             return False, message
 
-        # Mise à jour du mot de passe
         user.password_hash = AuthService.hash_password(new_password)
         db.session.commit()
 
-        return True, "Mot de passe modifié avec succès"
+        return True, "Mot de passe modifie"
 
     @staticmethod
     def reset_password(user: User, new_password: str) -> tuple:
-        """
-        Réinitialise le mot de passe d'un utilisateur (admin)
-        Retourne (success, message)
-        """
-        # Validation du nouveau mot de passe
+        """reset mdp (admin)"""
         is_valid, message = AuthService.validate_password(new_password)
         if not is_valid:
             return False, message
 
-        # Mise à jour du mot de passe
         user.password_hash = AuthService.hash_password(new_password)
         db.session.commit()
 
-        return True, "Mot de passe réinitialisé avec succès"
+        return True, "Mot de passe reinitialise"

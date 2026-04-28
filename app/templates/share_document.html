@@ -1,23 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Partager - {{ document.name }} - FamiliDocs{% endblock %}
+{% block title %}Partager - {{ document.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .user-select-item {
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    .user-select-item:hover {
-        background-color: #f8f9fa;
-    }
-    .user-select-item.selected {
-        background-color: #e7f1ff;
-        border-color: #0d6efd;
-    }
-    .family-badge {
-        font-size: 0.7rem;
-    }
+    .user-select-item { cursor: pointer; transition: background 0.2s; }
+    .user-select-item:hover { background: rgba(0,122,255,0.04); }
+    .user-select-item.selected { background: rgba(0,122,255,0.06); }
 </style>
 {% endblock %}
 
@@ -30,245 +19,160 @@
     </ol>
 </nav>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-share me-2"></i>Partager "{{ document.name }}"</h1>
-    <a href="{{ url_for('document.my_shared_documents') }}" class="btn btn-outline-info">
-        <i class="bi bi-folder-symlink me-2"></i>Mes partages
-    </a>
-</div>
+<h1 style="font-size: 1.5rem; font-weight: 700;" class="mb-4">Partager "{{ document.name }}"</h1>
 
-<div class="row">
+<div class="row g-4">
     <div class="col-md-7">
-        <!-- Partage avec plusieurs utilisateurs -->
+        <!-- Partage avec membres -->
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="bi bi-people me-2"></i>Partager avec des membres
-                <span class="badge bg-primary ms-2" id="selectedCount">0</span> selectionne(s)
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Partager avec</span>
+                <span class="badge bg-primary" id="selectedCount">0</span>
             </div>
             <div class="card-body">
                 {% if available_users or family_members %}
                 <form method="POST" action="{{ url_for('document.share', document_id=document.id) }}" id="shareForm">
-                    <!-- Selection multiple d'utilisateurs -->
-                    <div class="mb-3">
-                        <label class="form-label">Selectionner les personnes <small class="text-muted">(cliquez pour selectionner)</small></label>
-
-                        {% if family_members %}
-                        <h6 class="mt-3 mb-2"><i class="bi bi-people-fill text-primary me-1"></i>Membres de famille</h6>
-                        <div class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
-                            {% for member in family_members %}
-                            <label class="list-group-item user-select-item d-flex align-items-center">
-                                <input type="checkbox" class="form-check-input me-3 user-checkbox"
-                                       name="user_ids" value="{{ member.user.id }}">
-                                <div class="flex-grow-1">
-                                    <strong>{{ member.user.full_name }}</strong>
-                                    <br>
-                                    <small class="text-muted">{{ member.user.email }}</small>
-                                </div>
-                                <span class="badge bg-secondary family-badge">{{ member.family.name }}</span>
-                                <span class="badge bg-light text-dark ms-1 family-badge">{{ member.role }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-
-                        {% if available_users %}
-                        <h6 class="mt-3 mb-2"><i class="bi bi-person me-1"></i>Autres utilisateurs</h6>
-                        <div class="list-group" style="max-height: 200px; overflow-y: auto;">
-                            {% for user in available_users %}
-                            <label class="list-group-item user-select-item d-flex align-items-center">
-                                <input type="checkbox" class="form-check-input me-3 user-checkbox"
-                                       name="user_ids" value="{{ user.id }}">
-                                <div class="flex-grow-1">
-                                    <strong>{{ user.full_name }}</strong>
-                                    <br>
-                                    <small class="text-muted">{{ user.email }}</small>
-                                </div>
-                            </label>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <hr>
-
-                    <div class="mb-3">
-                        <label class="form-label">Droits d'acces</label>
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="can_edit" name="can_edit">
-                                    <label class="form-check-label" for="can_edit">
-                                        <i class="bi bi-pencil me-1"></i>Modification
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="can_download" name="can_download" checked>
-                                    <label class="form-check-label" for="can_download">
-                                        <i class="bi bi-download me-1"></i>Telechargement
-                                    </label>
-                                </div>
+                    {% if family_members %}
+                    <div class="list-group mb-3" style="max-height: 180px; overflow-y: auto;">
+                        {% for member in family_members %}
+                        <label class="list-group-item user-select-item d-flex align-items-center">
+                            <input type="checkbox" class="form-check-input me-3 user-checkbox" name="user_ids" value="{{ member.user.id }}">
+                            <div class="flex-grow-1">
+                                <strong>{{ member.user.full_name }}</strong>
+                                <small class="text-muted d-block">{{ member.family.name }}</small>
                             </div>
-                            <div class="col-6">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="can_share" name="can_share">
-                                    <label class="form-check-label" for="can_share">
-                                        <i class="bi bi-share me-1"></i>Re-partage
-                                    </label>
-                                </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if available_users %}
+                    <div class="list-group mb-3" style="max-height: 150px; overflow-y: auto;">
+                        {% for user in available_users %}
+                        <label class="list-group-item user-select-item d-flex align-items-center">
+                            <input type="checkbox" class="form-check-input me-3 user-checkbox" name="user_ids" value="{{ user.id }}">
+                            <span>{{ user.full_name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="can_download" name="can_download" checked>
+                                <label class="form-check-label small" for="can_download">Telechargement</label>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="can_edit" name="can_edit">
+                                <label class="form-check-label small" for="can_edit">Modification</label>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="can_share" name="can_share">
+                                <label class="form-check-label small" for="can_share">Re-partage</label>
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="end_date" class="form-label">Date d'expiration</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date"
-                               min="{{ today }}" max="{{ max_date }}">
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle me-1"></i>Maximum 90 jours. Laisser vide = permanent (renouvellement manuel requis).
-                        </small>
+                        <label for="end_date" class="form-label">Expire le</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" min="{{ today }}" max="{{ max_date }}">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Note (optionnel)</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="2"
-                                  placeholder="Raison du partage..."></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" id="shareBtn" disabled>
-                        <i class="bi bi-share me-2"></i>Partager avec <span id="shareCount">0</span> personne(s)
+                    <button type="submit" class="btn btn-primary w-100" id="shareBtn" disabled>
+                        Partager (<span id="shareCount">0</span>)
                     </button>
                 </form>
                 {% else %}
-                <div class="alert alert-info mb-0">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Tous les utilisateurs ont deja acces a ce document, ou vous n'avez pas de contacts disponibles.
-                </div>
+                <p class="text-muted text-center mb-0">Aucun utilisateur disponible</p>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Lien d'invitation securise -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="bi bi-link-45deg me-2"></i>Lien de partage securise
-            </div>
+        <!-- Lien de partage -->
+        <div class="card">
+            <div class="card-header">Lien de partage</div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('family.create_share_link', document_id=document.id) }}">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label for="link_expires" class="form-label">Expire dans</label>
-                            <select class="form-select" id="link_expires" name="expires_hours">
-                                <option value="1">1 heure</option>
-                                <option value="24" selected>24 heures</option>
-                                <option value="72">3 jours</option>
-                                <option value="168">7 jours</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="max_uses" class="form-label">Utilisations max</label>
-                            <select class="form-select" id="max_uses" name="max_uses">
-                                <option value="1" selected>1 fois</option>
-                                <option value="3">3 fois</option>
-                                <option value="5">5 fois</option>
-                                <option value="10">10 fois</option>
-                            </select>
-                        </div>
-                        <div class="col-md-5">
-                            <button type="submit" class="btn btn-outline-primary w-100">
-                                <i class="bi bi-link-45deg me-2"></i>Generer un lien
-                            </button>
-                        </div>
+                <form method="POST" action="{{ url_for('family.create_share_link', document_id=document.id) }}" class="row g-2 align-items-end">
+                    <div class="col-4">
+                        <select class="form-select form-select-sm" name="expires_hours">
+                            <option value="24" selected>24h</option>
+                            <option value="72">3 jours</option>
+                            <option value="168">7 jours</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select class="form-select form-select-sm" name="max_uses">
+                            <option value="1" selected>1 usage</option>
+                            <option value="5">5 usages</option>
+                            <option value="10">10 usages</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Generer</button>
                     </div>
                 </form>
 
                 {% if share_links %}
-                <hr>
-                <h6>Liens actifs</h6>
-                {% for link in share_links %}
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                    <div>
-                        <code class="small">{{ url_for('family.accept_share_link', token=link.token, _external=True)[:50] }}...</code>
-                        <br>
+                <div class="mt-3">
+                    {% for link in share_links %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                         <small class="text-muted">
-                            Expire: {{ link.expires_at.strftime('%d/%m/%Y %H:%M') }} |
-                            Utilisations: {{ link.use_count }}/{{ link.max_uses }}
+                            {{ link.expires_at.strftime('%d/%m %H:%M') }} — {{ link.use_count }}/{{ link.max_uses }}
                         </small>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ url_for('family.accept_share_link', token=link.token, _external=True)|tojson }})"><i class="bi bi-clipboard"></i></button>
+                            <form method="POST" action="{{ url_for('family.revoke_share_link', link_id=link.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+                            </form>
+                        </div>
                     </div>
-                    <div>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ url_for('family.accept_share_link', token=link.token, _external=True)|tojson }})" title="Copier">
-                            <i class="bi bi-clipboard"></i>
-                        </button>
-                        <form method="POST" action="{{ url_for('family.revoke_share_link', link_id=link.id) }}" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoquer">
-                                <i class="bi bi-x"></i>
-                            </button>
-                        </form>
-                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
                 {% endif %}
             </div>
         </div>
     </div>
 
     <div class="col-md-5">
-        <!-- Permissions existantes -->
+        <!-- Acces existants -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-people me-2"></i>Acces actuels</span>
-                <span class="badge bg-primary">{{ existing_permissions|length }}</span>
+                <span>Acces actuels</span>
+                <span class="badge bg-secondary">{{ existing_permissions|length }}</span>
             </div>
-            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+            <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
                 {% if existing_permissions %}
                 {% for perm in existing_permissions %}
-                <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
                         <strong>{{ perm.granted_user.full_name }}</strong>
-                        <br>
-                        <small class="text-muted">{{ perm.granted_user.email }}</small>
-                        <br>
-                        {% if perm.can_view %}
-                        <span class="badge bg-primary badge-sm">Lecture</span>
-                        {% endif %}
-                        {% if perm.can_edit %}
-                        <span class="badge bg-warning badge-sm">Modification</span>
-                        {% endif %}
-                        {% if perm.can_download %}
-                        <span class="badge bg-success badge-sm">Telechargement</span>
-                        {% endif %}
-                        {% if perm.can_share %}
-                        <span class="badge bg-info badge-sm">Partage</span>
-                        {% endif %}
-                        {% if perm.end_date %}
-                        <br><small class="text-{{ 'danger' if not perm.is_valid() else 'muted' }}">
-                            <i class="bi bi-calendar me-1"></i>Expire: {{ perm.end_date.strftime('%d/%m/%Y') }}
-                        </small>
-                        {% else %}
-                        <br><small class="text-muted"><i class="bi bi-infinity me-1"></i>Permanent</small>
-                        {% endif %}
+                        <div>
+                            {% if perm.can_edit %}<span class="badge bg-warning" style="font-size: 0.6rem;">Modif</span>{% endif %}
+                            {% if perm.can_download %}<span class="badge bg-success" style="font-size: 0.6rem;">DL</span>{% endif %}
+                            {% if perm.end_date %}<small class="text-muted ms-1">{{ perm.end_date.strftime('%d/%m') }}</small>{% endif %}
+                        </div>
                     </div>
                     <form method="POST" action="{{ url_for('document.revoke_access', document_id=document.id, user_id=perm.user_id) }}"
-                          onsubmit="return confirm('Revoquer l\'acces de {{ perm.granted_user.first_name }} ?');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoquer">
-                            <i class="bi bi-x-circle"></i>
-                        </button>
+                          onsubmit="return confirm('Revoquer ?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
                     </form>
                 </div>
                 {% endfor %}
-
-                <!-- Bouton revoquer tous -->
                 {% if existing_permissions|length > 1 %}
-                <form method="POST" action="{{ url_for('document.revoke_all_access', document_id=document.id) }}"
-                      onsubmit="return confirm('Revoquer TOUS les acces ? Cette action est irreversible.');">
-                    <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
-                        <i class="bi bi-x-circle me-2"></i>Revoquer tous les acces
-                    </button>
-                </form>
+                <div class="list-group-item text-center">
+                    <form method="POST" action="{{ url_for('document.revoke_all_access', document_id=document.id) }}"
+                          onsubmit="return confirm('Revoquer TOUS les acces ?');">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Tout revoquer</button>
+                    </form>
+                </div>
                 {% endif %}
                 {% else %}
-                <p class="text-muted text-center mb-0">
-                    <i class="bi bi-lock me-2"></i>Aucun partage en cours
-                </p>
+                <div class="list-group-item text-center text-muted">Aucun partage</div>
                 {% endif %}
             </div>
         </div>
@@ -278,32 +182,30 @@
 
 {% block extra_js %}
 <script>
-// Gestion de la selection multiple
 document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.user-checkbox');
-    const selectedCount = document.getElementById('selectedCount');
-    const shareCount = document.getElementById('shareCount');
-    const shareBtn = document.getElementById('shareBtn');
+    var checkboxes = document.querySelectorAll('.user-checkbox');
+    var selectedCount = document.getElementById('selectedCount');
+    var shareCount = document.getElementById('shareCount');
+    var shareBtn = document.getElementById('shareBtn');
 
     function updateCount() {
-        const checked = document.querySelectorAll('.user-checkbox:checked').length;
-        selectedCount.textContent = checked;
-        shareCount.textContent = checked;
-        shareBtn.disabled = checked === 0;
+        var checked = document.querySelectorAll('.user-checkbox:checked').length;
+        if (selectedCount) selectedCount.textContent = checked;
+        if (shareCount) shareCount.textContent = checked;
+        if (shareBtn) shareBtn.disabled = checked === 0;
     }
 
-    checkboxes.forEach(cb => {
+    checkboxes.forEach(function(cb) {
         cb.addEventListener('change', function() {
             this.closest('.user-select-item').classList.toggle('selected', this.checked);
             updateCount();
         });
     });
 
-    // Clic sur la ligne = toggle checkbox
-    document.querySelectorAll('.user-select-item').forEach(item => {
+    document.querySelectorAll('.user-select-item').forEach(function(item) {
         item.addEventListener('click', function(e) {
             if (e.target.type !== 'checkbox') {
-                const cb = this.querySelector('.user-checkbox');
+                var cb = this.querySelector('.user-checkbox');
                 cb.checked = !cb.checked;
                 this.classList.toggle('selected', cb.checked);
                 updateCount();
@@ -312,18 +214,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Copier dans le presse-papier
 function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
+    navigator.clipboard.writeText(text).then(function() {
         alert('Lien copie !');
-    }).catch(() => {
-        // Fallback pour navigateurs sans support clipboard API
-        var textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+    }).catch(function() {
+        var t = document.createElement('textarea');
+        t.value = text; document.body.appendChild(t); t.select();
+        document.execCommand('copy'); document.body.removeChild(t);
         alert('Lien copie !');
     });
 }

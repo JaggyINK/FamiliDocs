@@ -6,84 +6,110 @@
 <!-- Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 1.5rem; font-weight: 700;">Bonjour, {{ current_user.first_name }}</h1>
-    <a href="{{ url_for('document.upload') }}" class="btn btn-primary">Ajouter un document</a>
-</div>
-
-<!-- Barre de recherche -->
-<div class="mb-4">
-    <form action="{{ url_for('search.advanced_search') }}" method="GET">
-        <div class="input-group">
-            <input type="text" class="form-control" name="q"
-                   placeholder="Rechercher un document, une tache, un dossier..." style="padding: 10px 14px;">
-            <button type="submit" class="btn btn-primary">Rechercher</button>
-        </div>
-    </form>
+    <a href="{{ url_for('document.upload') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter
+    </a>
 </div>
 
 <!-- Taches en retard -->
 {% if overdue_tasks %}
 <div class="alert alert-danger mb-4">
-    <strong>Taches en retard</strong>
-    <div class="mt-2">
-        {% for task in overdue_tasks %}
-        <div class="d-flex justify-content-between align-items-center py-1">
-            <a href="{{ url_for('task.view', task_id=task.id) }}" class="text-decoration-none" style="color: inherit;">
-                {{ task.title }}
-            </a>
-            <small class="text-muted">{{ task.days_until_due|abs }}j de retard</small>
+    <div class="d-flex align-items-center">
+        <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 69, 58, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="me-3">
+            <i class="bi bi-exclamation-triangle" style="color: var(--color-danger);"></i>
         </div>
-        {% endfor %}
+        <div class="flex-grow-1">
+            <strong>{{ overdue_tasks|length }} tache{{ 's' if overdue_tasks|length > 1 }} en retard</strong>
+            <div class="mt-1">
+                {% for task in overdue_tasks[:3] %}
+                <a href="{{ url_for('task.view', task_id=task.id) }}" class="text-decoration-none d-block py-1" style="color: inherit; font-size: 0.85rem;">
+                    {{ task.title }} <small class="text-muted">({{ task.days_until_due|abs }}j)</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 {% endif %}
 
-<!-- Stat Cards -->
+<!-- Stat Cards avec icones visuelles -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-card-value">{{ stats.total_documents }}</div>
-            <div class="stat-card-label">Documents</div>
-        </div>
+        <a href="{{ url_for('document.list_documents') }}" class="text-decoration-none">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, rgba(0, 122, 255, 0.12), rgba(0, 122, 255, 0.04)); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-file-earmark" style="color: #007AFF; font-size: 1.1rem;"></i>
+                    </div>
+                </div>
+                <div class="stat-card-value">{{ stats.total_documents }}</div>
+                <div class="stat-card-label">Documents</div>
+            </div>
+        </a>
     </div>
     <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-card-value">{{ stats.pending_tasks }}</div>
-            <div class="stat-card-label">Taches</div>
-        </div>
+        <a href="{{ url_for('task.list_tasks') }}" class="text-decoration-none">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, rgba(48, 209, 88, 0.12), rgba(48, 209, 88, 0.04)); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-check2-square" style="color: #30D158; font-size: 1.1rem;"></i>
+                    </div>
+                </div>
+                <div class="stat-card-value">{{ stats.pending_tasks }}</div>
+                <div class="stat-card-label">Taches</div>
+            </div>
+        </a>
     </div>
     <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-card-value">{{ stats.total_folders }}</div>
-            <div class="stat-card-label">Dossiers</div>
-        </div>
+        <a href="{{ url_for('user.folders') }}" class="text-decoration-none">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, rgba(255, 159, 10, 0.12), rgba(255, 159, 10, 0.04)); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-folder" style="color: #FF9F0A; font-size: 1.1rem;"></i>
+                    </div>
+                </div>
+                <div class="stat-card-value">{{ stats.total_folders }}</div>
+                <div class="stat-card-label">Dossiers</div>
+            </div>
+        </a>
     </div>
     <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-card-value">{{ stats.shared_documents }}</div>
-            <div class="stat-card-label">Partages</div>
-        </div>
+        <a href="{{ url_for('document.shared_documents') }}" class="text-decoration-none">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, rgba(88, 86, 214, 0.12), rgba(88, 86, 214, 0.04)); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-share" style="color: #5856D6; font-size: 1.1rem;"></i>
+                    </div>
+                </div>
+                <div class="stat-card-value">{{ stats.shared_documents }}</div>
+                <div class="stat-card-label">Partages</div>
+            </div>
+        </a>
     </div>
 </div>
 
 <!-- Documents recents + Taches a venir -->
-<div class="row g-4 mb-4">
+<div class="row g-4">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Documents recents</span>
+                <span><i class="bi bi-clock-history me-2" style="color: var(--color-accent);"></i>Documents recents</span>
                 <a href="{{ url_for('document.list_documents') }}" class="btn btn-sm btn-link">Voir tout</a>
             </div>
             <div class="card-body p-0">
                 {% if recent_documents %}
                 <div class="list-group list-group-flush">
-                    {% for doc in recent_documents %}
+                    {% for doc in recent_documents[:5] %}
                     <a href="{{ url_for('document.view', document_id=doc.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div>{{ doc.name }}</div>
-                                <small class="text-muted">{{ doc.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--color-accent-light); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="me-3">
+                                <i class="bi bi-file-earmark" style="color: var(--color-accent); font-size: 0.85rem;"></i>
                             </div>
-                            <span class="badge bg-secondary">{{ doc.file_type }}</span>
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="text-truncate">{{ doc.name }}</div>
+                                <small class="text-muted">{{ doc.updated_at.strftime('%d/%m/%Y') }}</small>
+                            </div>
+                            <span class="badge bg-secondary ms-2">{{ doc.file_type }}</span>
                         </div>
                     </a>
                     {% endfor %}
@@ -98,20 +124,23 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Taches a venir</span>
+                <span><i class="bi bi-calendar-event me-2" style="color: var(--color-success);"></i>Taches a venir</span>
                 <a href="{{ url_for('task.list_tasks') }}" class="btn btn-sm btn-link">Voir tout</a>
             </div>
             <div class="card-body p-0">
                 {% if upcoming_tasks %}
                 <div class="list-group list-group-flush">
-                    {% for task in upcoming_tasks %}
+                    {% for task in upcoming_tasks[:5] %}
                     <a href="{{ url_for('task.view', task_id=task.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div>{{ task.title }}</div>
-                                <small class="text-muted">Echeance : {{ task.due_date.strftime('%d/%m/%Y') }}</small>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(48, 209, 88, 0.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="me-3">
+                                <i class="bi bi-check2-square" style="color: var(--color-success); font-size: 0.85rem;"></i>
                             </div>
-                            <span class="badge bg-{{ task.priority_color }}">{{ task.priority }}</span>
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="text-truncate">{{ task.title }}</div>
+                                <small class="text-muted">{{ task.due_date.strftime('%d/%m/%Y') }}</small>
+                            </div>
+                            <span class="badge bg-{{ task.priority_color }} ms-2">{{ task.priority }}</span>
                         </div>
                     </a>
                     {% endfor %}
@@ -122,221 +151,5 @@
             </div>
         </div>
     </div>
-</div>
-
-<!-- T28 - Widget familles + T29 - Widget notifications -->
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-people me-2"></i>Mes familles</span>
-                <a href="{{ url_for('family.list_families') }}" class="btn btn-sm btn-link">Voir tout</a>
-            </div>
-            <div class="card-body p-0">
-                {% if user_families %}
-                <div class="list-group list-group-flush">
-                    {% for family in user_families[:5] %}
-                    <a href="{{ url_for('family.view_family', family_id=family.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div>{{ family.name }}</div>
-                                <small class="text-muted">{{ family.members.count() }} membre{{ 's' if family.members.count() > 1 }}</small>
-                            </div>
-                            <i class="bi bi-chevron-right text-muted"></i>
-                        </div>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-center py-4 mb-0">Aucune famille</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>
-                    <i class="bi bi-bell me-2"></i>Notifications
-                    {% if notification_summary.unread_count > 0 %}
-                    <span class="badge bg-danger ms-1">{{ notification_summary.unread_count }}</span>
-                    {% endif %}
-                </span>
-                <a href="{{ url_for('notification.list_notifications') }}" class="btn btn-sm btn-link">Voir tout</a>
-            </div>
-            <div class="card-body p-0">
-                {% if notification_summary.recent %}
-                <div class="list-group list-group-flush">
-                    {% for notif in notification_summary.recent %}
-                    <div class="list-group-item {{ '' if notif.is_read else 'list-group-item-light' }}">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="fw-{{ 'bold' if not notif.is_read else 'normal' }}" style="font-size: 0.85rem;">{{ notif.title }}</div>
-                                <small class="text-muted">{{ notif.created_at.strftime('%d/%m %H:%M') }}</small>
-                            </div>
-                            {% if notif.priority == 'urgent' %}
-                            <span class="badge bg-danger">Urgent</span>
-                            {% elif notif.priority == 'high' %}
-                            <span class="badge bg-warning text-dark">Important</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-center py-4 mb-0">Aucune notification</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Sections secondaires -->
-<div class="accordion" id="dashboardMore">
-    <!-- Statistiques detaillees -->
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="statsHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#statsCollapse" aria-expanded="false">
-                Statistiques et indicateurs
-            </button>
-        </h2>
-        <div id="statsCollapse" class="accordion-collapse collapse" data-bs-parent="#dashboardMore">
-            <div class="accordion-body">
-                <div class="row">
-                    <!-- Repartition par type -->
-                    <div class="col-md-6 mb-3">
-                        <h6 class="mb-3" style="font-size: 0.85rem; font-weight: 600;">Repartition par type</h6>
-                        {% if detailed_stats.docs_by_type %}
-                        {% for type, count in detailed_stats.docs_by_type.items() %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span style="font-size: 0.85rem;">{{ type|upper }}</span>
-                            <div class="d-flex align-items-center">
-                                <div class="progress me-2" style="width: 100px;">
-                                    <div class="progress-bar" style="width: {{ (count / detailed_stats.total_documents * 100) if detailed_stats.total_documents > 0 else 0 }}%;"></div>
-                                </div>
-                                <span class="badge bg-secondary">{{ count }}</span>
-                            </div>
-                        </div>
-                        {% endfor %}
-                        {% else %}
-                        <p class="text-muted mb-0" style="font-size: 0.85rem;">Aucune donnee</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Indicateurs -->
-                    <div class="col-md-6 mb-3">
-                        <h6 class="mb-3" style="font-size: 0.85rem; font-weight: 600;">Indicateurs</h6>
-                        <div class="row text-center">
-                            <div class="col-6 mb-3">
-                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-accent);">{{ detailed_stats.total_size_formatted }}</div>
-                                <small class="text-muted">Espace utilise</small>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-success);">{{ detailed_stats.total_tasks }}</div>
-                                <small class="text-muted">Total taches</small>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-danger);">{{ detailed_stats.overdue_tasks }}</div>
-                                <small class="text-muted">En retard</small>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-warning);">{{ detailed_stats.expiring_soon }}</div>
-                                <small class="text-muted">A renouveler</small>
-                            </div>
-                        </div>
-
-                        {% if detailed_stats.tasks_by_status %}
-                        <hr>
-                        <h6 class="mb-2" style="font-size: 0.85rem; font-weight: 600;">Taches par statut</h6>
-                        {% for status, count in detailed_stats.tasks_by_status.items() %}
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small>{{ status }}</small>
-                            <span class="badge bg-{{ 'secondary' if status == 'pending' else ('info' if status == 'in_progress' else ('success' if status == 'completed' else 'dark')) }}">
-                                {{ count }}
-                            </span>
-                        </div>
-                        {% endfor %}
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Activite des 6 derniers mois -->
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="activityHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#activityCollapse" aria-expanded="false">
-                Activite des 6 derniers mois
-            </button>
-        </h2>
-        <div id="activityCollapse" class="accordion-collapse collapse" data-bs-parent="#dashboardMore">
-            <div class="accordion-body">
-                <div class="d-flex justify-content-end mb-2">
-                    <a href="{{ url_for('user.activity_detailed') }}" class="btn btn-sm btn-outline-primary">Voir details</a>
-                </div>
-                <div class="d-flex align-items-end justify-content-around" style="height: 120px;">
-                    {% for month_data in detailed_stats.docs_by_month %}
-                    <div class="text-center" style="flex: 1;">
-                        <div style="background: var(--color-accent); border-radius: 4px 4px 0 0; margin: 0 4px;
-                             height: {{ [month_data.count * 20, 5]|max }}px; min-height: 5px; max-height: 100px;"
-                             title="{{ month_data.count }} documents">
-                        </div>
-                        <small class="text-muted d-block mt-1">{{ month_data.month }}</small>
-                        <small style="font-weight: 600;">{{ month_data.count }}</small>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Documents expirants -->
-    {% if expiring_documents %}
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="expiringHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#expiringCollapse" aria-expanded="false">
-                Documents expirant bientot
-                <span class="badge bg-warning text-dark ms-2">{{ expiring_documents|length }}</span>
-            </button>
-        </h2>
-        <div id="expiringCollapse" class="accordion-collapse collapse" data-bs-parent="#dashboardMore">
-            <div class="accordion-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Document</th>
-                                <th>Dossier</th>
-                                <th>Expiration</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for doc in expiring_documents %}
-                            <tr>
-                                <td>{{ doc.name }}</td>
-                                <td>{{ doc.folder.name if doc.folder else '-' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ 'danger' if doc.is_expired else 'warning' }}">
-                                        {{ doc.expiry_date.strftime('%d/%m/%Y') }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('document.view', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">Voir</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

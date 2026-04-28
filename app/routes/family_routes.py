@@ -1,6 +1,4 @@
-"""
-Routes de gestion des familles virtuelles et liens de partage securises
-"""
+# routes familles + liens partage
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_required, current_user
 
@@ -19,10 +17,7 @@ family_bp = Blueprint('family', __name__)
 
 @family_bp.route('/join/<token>')
 def join_family(token):
-    """
-    Route d'invitation smart - F6
-    Redirige vers login ou register selon l'état de connexion
-    """
+    """invite smart - redir login/register"""
     link = ShareLink.query.filter_by(token=token).first()
 
     if not link:
@@ -42,14 +37,14 @@ def join_family(token):
         flash("Groupe introuvable.", 'danger')
         return redirect(url_for('auth.login'))
 
-    # Si l'utilisateur est connecté, traiter directement l'invitation
+    # si connecte, traiter direct
     if current_user.is_authenticated:
         return redirect(url_for('family.accept_invite', token=token))
 
-    # Stocker le token en session pour après login/register
+    # stocker token en session
     session['pending_invite_token'] = token
 
-    # Afficher la page de choix login/register avec infos famille
+    # page choix login/register
     return render_template(
         'join_family.html',
         family=family,
@@ -58,16 +53,15 @@ def join_family(token):
     )
 
 
-# --- Gestion des familles ---
+# --- gestion familles ---
 
 @family_bp.route('/families')
 @login_required
 def list_families():
-    """Liste des groupes familiaux de l'utilisateur"""
-    # Familles creees par l'utilisateur
+    """liste groupes familiaux"""
     created = Family.query.filter_by(creator_id=current_user.id).all()
 
-    # Familles dont l'utilisateur est membre
+    # familles ou je suis membre
     memberships = FamilyMember.query.filter_by(user_id=current_user.id).all()
     member_families = []
     for m in memberships:
@@ -85,7 +79,7 @@ def list_families():
 @family_bp.route('/families/create', methods=['GET', 'POST'])
 @login_required
 def create_family():
-    """Cree un nouveau groupe familial"""
+    """cree groupe familial"""
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
@@ -106,7 +100,7 @@ def create_family():
         db.session.add(family)
         db.session.flush()
 
-        # Le createur est automatiquement admin
+        # createur = admin auto
         member = FamilyMember(
             family_id=family.id,
             user_id=current_user.id,
@@ -115,7 +109,7 @@ def create_family():
         db.session.add(member)
         db.session.commit()
 
-        flash(f'Groupe "{name}" cree avec succes.', 'success')
+        flash(f'Groupe "{name}" cree.', 'success')
         return redirect(url_for('family.view_family', family_id=family.id))
 
     return render_template('create_family.html')
@@ -124,7 +118,7 @@ def create_family():
 @family_bp.route('/families/<int:family_id>')
 @login_required
 def view_family(family_id):
-    """Affiche les details d'un groupe familial"""
+    """details groupe"""
     family = Family.query.get_or_404(family_id)
 
     if not family.is_member(current_user.id):
@@ -134,7 +128,7 @@ def view_family(family_id):
     members = FamilyMember.query.filter_by(family_id=family_id).all()
     can_manage = family.can_manage(current_user.id)
 
-    # Liens d'invitation actifs (si gestionnaire)
+    # liens invite actifs
     invite_links = []
     if can_manage:
         invite_links = ShareLink.query.filter(
@@ -161,7 +155,7 @@ def view_family(family_id):
 @family_bp.route('/families/<int:family_id>/invite', methods=['POST'])
 @login_required
 def create_invite_link(family_id):
-    """Genere un lien d'invitation securise pour le groupe"""
+    """genere lien invite"""
     family = Family.query.get_or_404(family_id)
 
     if not family.can_manage(current_user.id):
@@ -189,14 +183,14 @@ def create_invite_link(family_id):
     )
     db.session.commit()
 
-    flash('Lien d\'invitation genere avec succes.', 'success')
+    flash('Lien d\'invitation genere.', 'success')
     return redirect(url_for('family.view_family', family_id=family_id))
 
 
 @family_bp.route('/families/<int:family_id>/members/<int:member_id>/role', methods=['POST'])
 @login_required
 def change_member_role(family_id, member_id):
-    """Modifie le role d'un membre"""
+    """change role membre"""
     family = Family.query.get_or_404(family_id)
 
     if not family.can_manage(current_user.id):
@@ -218,19 +212,19 @@ def change_member_role(family_id, member_id):
         family_id=family_id, user_id=current_user.id
     ).first()
 
-    # RESTRICTION: Un gestionnaire ne peut pas promouvoir en admin ou chef_famille
+    # RESTRICTION: Un gestionnaire ne peut pas promouvoir en admin ou responsable
     if current_member and current_member.role == 'gestionnaire':
-        if new_role in ('admin', 'chef_famille'):
-            flash("Un gestionnaire ne peut pas promouvoir quelqu'un en admin ou chef de famille.", 'warning')
+        if new_role in ('admin', 'responsable'):
+            flash("Un gestionnaire ne peut pas promouvoir quelqu'un en admin ou responsable.", 'warning')
             return redirect(url_for('family.view_family', family_id=family_id))
 
-    # RESTRICTION: Limite de 2 chefs de famille max
-    if new_role == 'chef_famille':
-        chefs_count = FamilyMember.query.filter_by(
-            family_id=family_id, role='chef_famille'
+    # RESTRICTION: Limite de 2 responsables max
+    if new_role == 'responsable':
+        responsable_count = FamilyMember.query.filter_by(
+            family_id=family_id, role='responsable'
         ).count()
-        if chefs_count >= 2:
-            flash("Il ne peut y avoir que 2 chefs de famille maximum.", 'warning')
+        if responsable_count >= 2:
+            flash("Il ne peut y avoir que 2 responsables maximum.", 'warning')
             return redirect(url_for('family.view_family', family_id=family_id))
 
     if new_role in FamilyMember.ROLES:
@@ -244,7 +238,7 @@ def change_member_role(family_id, member_id):
 @family_bp.route('/families/<int:family_id>/members/<int:member_id>/remove', methods=['POST'])
 @login_required
 def remove_member(family_id, member_id):
-    """Retire un membre du groupe + revoque ses acces aux documents"""
+    """retire membre + revoque acces"""
     from app.services.permission_service import PermissionService
 
     family = Family.query.get_or_404(family_id)
@@ -290,7 +284,7 @@ def remove_member(family_id, member_id):
 @family_bp.route('/families/<int:family_id>/leave', methods=['POST'])
 @login_required
 def leave_family(family_id):
-    """Quitter un groupe familial"""
+    """quitter groupe"""
     family = Family.query.get_or_404(family_id)
 
     if family.creator_id == current_user.id:
@@ -312,7 +306,7 @@ def leave_family(family_id):
 @family_bp.route('/families/<int:family_id>/delete', methods=['POST'])
 @login_required
 def delete_family(family_id):
-    """Supprime un groupe familial"""
+    """suppr groupe"""
     family = Family.query.get_or_404(family_id)
 
     if family.creator_id != current_user.id:
@@ -327,12 +321,12 @@ def delete_family(family_id):
     return redirect(url_for('family.list_families'))
 
 
-# --- Liens de partage securises ---
+# --- liens partage ---
 
 @family_bp.route('/invite/<token>')
 @login_required
 def accept_invite(token):
-    """Accepte une invitation via lien securise"""
+    """accepte invite lien"""
     link = ShareLink.query.filter_by(token=token).first()
 
     if not link:
@@ -387,7 +381,7 @@ def accept_invite(token):
 @family_bp.route('/share/<token>')
 @login_required
 def accept_share_link(token):
-    """Accepte un lien de partage de document"""
+    """accepte lien partage doc"""
     link = ShareLink.query.filter_by(token=token).first()
 
     if not link or not link.is_valid:
@@ -454,7 +448,7 @@ def accept_share_link(token):
 @family_bp.route('/documents/<int:document_id>/share-link', methods=['POST'])
 @login_required
 def create_share_link(document_id):
-    """Genere un lien de partage pour un document"""
+    """genere lien partage doc"""
     document = Document.query.get_or_404(document_id)
 
     if document.owner_id != current_user.id and not current_user.is_admin():
@@ -485,7 +479,7 @@ def create_share_link(document_id):
 @family_bp.route('/share-links/<int:link_id>/revoke', methods=['POST'])
 @login_required
 def revoke_share_link(link_id):
-    """Revoque un lien de partage"""
+    """revoque lien"""
     link = ShareLink.query.get_or_404(link_id)
 
     if link.created_by != current_user.id and not current_user.is_admin():

@@ -161,7 +161,7 @@ class TestFamilyWorkflow:
         member1 = FamilyMember(
             family_id=family.id,
             user_id=test_user.id,
-            role='chef_famille'
+            role='responsable'
         )
         db.session.add(member1)
 

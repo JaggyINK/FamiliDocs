@@ -73,12 +73,12 @@ def main():
 
     # Creer la fenetre native avec PyWebView
     window = webview.create_window(
-        title='FamiliDocs - Coffre Administratif Familial',
+        title='FamiliDocs',
         url=f'http://127.0.0.1:{port}',
-        width=1280,
-        height=800,
+        width=1360,
+        height=860,
         resizable=True,
-        min_size=(800, 600),
+        min_size=(900, 640),
         text_select=True
     )
 

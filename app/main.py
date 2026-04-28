@@ -1,11 +1,15 @@
-"""
-Point d'entrée principal de l'application FamiliDocs
-"""
+# entree principale app
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app import create_app
 
-# Création de l'application
+# creation app
 app = create_app()
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
+    # par defaut : ecoute uniquement en local (127.0.0.1)
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    app.run(debug=debug, host=host, port=5000)

@@ -1,29 +1,28 @@
-"""
-Configuration generale de l'application FamiliDocs
-"""
+#bdd , clé secrete, session user, upload fichier, sauvegardes, roles, catégories : mode dev/test/prod
+
 import os
 import sys
-import logging
 import secrets
 from datetime import timedelta
 from dotenv import load_dotenv
 
-# Charger .env avant toute lecture d'os.environ
-load_dotenv()
-
-# Repertoire de base (compatible PyInstaller)
+# check mode de dev/compil dpuis .env
 if getattr(sys, 'frozen', False):
-    # Mode .exe (PyInstaller)
+    load_dotenv(os.path.join(os.path.dirname(sys.executable), '.env'))
+else:
+    load_dotenv()
+# base repertoire
+if getattr(sys, 'frozen', False):
+    # mode .exe
     BASE_DIR = sys._MEIPASS
     USER_DATA_DIR = os.path.join(os.path.dirname(sys.executable), 'app', 'database')
 else:
-    # Mode developpement normal
+    # mode dev
     BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
     USER_DATA_DIR = os.path.join(BASE_DIR, 'database')
 
-
 def _generate_secret_key():
-    """Genere une cle secrete persistante pour le developpement"""
+    """secret key"""
     key_file = os.path.join(USER_DATA_DIR, '.secret_key')
     if os.path.exists(key_file):
         with open(key_file, 'r') as f:
@@ -34,53 +33,34 @@ def _generate_secret_key():
         f.write(key)
     return key
 
-
 def _get_engine_options():
-    """Retourne les options moteur pour PostgreSQL"""
-    return {
-        'pool_size': 10,
-        'max_overflow': 20,
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
-    }
-
+    """options pool postgresql (verifie connexion avant requete)"""
+    return {'pool_pre_ping': True}
 
 class Config:
-    """Configuration de base"""
-
-    # Cle secrete : variable d'environnement obligatoire en production
+    """cfg"""
+    # secret key env var prod
     SECRET_KEY = os.environ.get('SECRET_KEY') or _generate_secret_key()
-
-    # Base de donnees PostgreSQL (partagee entre web et desktop .exe)
-    # Les deux modes utilisent la meme BDD pour que les donnees soient synchronisees
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://jagadmin:pass@localhost:5432/familidocs'
+    # bdd postgresql (web + desktop: meme bdd)
+    # pas de fallback en dur : DATABASE_URL doit etre dans .env
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = _get_engine_options()
-
     # Sessions
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-
-    # Uploads
+    # Upload
     UPLOAD_FOLDER = os.environ.get('FAMILIDOCS_UPLOAD_FOLDER') or os.path.join(USER_DATA_DIR, 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max
     ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'gif'}
-
-    # Chiffrement
+    # Chifrement
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY') or None
-
-    # Sauvegardes
+    # Sauvegarde
     BACKUP_FOLDER = os.environ.get('FAMILIDOCS_BACKUP_FOLDER') or os.path.join(USER_DATA_DIR, 'backups')
-
-    # Mot de passe admin par defaut (configurable via env)
-    ADMIN_DEFAULT_PASSWORD = os.environ.get('ADMIN_DEFAULT_PASSWORD') or 'Admin123!'
-
-    # Logging
+    # Logs
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-
-    # Categories de documents
+    # Categorie de doc
     DEFAULT_CATEGORIES = [
         'Administratif',
         'Sante',
@@ -88,37 +68,41 @@ class Config:
         'Logement',
         'Autres'
     ]
-
-    # Niveaux de confidentialite
+    # Niveau confidentialite
     CONFIDENTIALITY_LEVELS = {
         'public': 'Public - Visible par tous les membres autorises',
         'private': 'Prive - Visible uniquement par le proprietaire',
         'restricted': 'Restreint - Visible par les personnes choisies'
     }
-
-    # Valeurs autorisees pour la validation
     VALID_PRIORITIES = {'low', 'normal', 'high', 'urgent'}
     VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
 
-    # Roles utilisateurs
+    # roles users
     USER_ROLES = {
         'admin': 'Administrateur',
         'user': 'Utilisateur',
         'trusted': 'Personne de confiance'
     }
 
-
-
 class DevelopmentConfig(Config):
-    """Configuration de developpement"""
+    """cfg dev"""
     DEBUG = True
     TESTING = False
     LOG_LEVEL = 'DEBUG'
-    # Herite de Config.SQLALCHEMY_DATABASE_URI (PostgreSQL)
+    # herite bdd postgresql
+
+    @classmethod
+    def init_app(cls, app):
+        """verif cfg dev"""
+        if not os.environ.get('DATABASE_URL'):
+            raise RuntimeError(
+                "DATABASE_URL non definie. "
+                "Copiez .env.example en .env et configurez la connexion PostgreSQL."
+            )
 
 
 class TestingConfig(Config):
-    """Configuration de test"""
+    """cfg test"""
     DEBUG = True
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
@@ -128,22 +112,27 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    """Configuration de production"""
+    """cfg prod"""
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = True
 
     @classmethod
     def init_app(cls, app):
-        """Validation de la configuration en production"""
-        if app.config['SECRET_KEY'] == _generate_secret_key():
-            app.logger.warning(
-                "ATTENTION: SECRET_KEY non definie en production! "
-                "Definissez la variable d'environnement SECRET_KEY."
+        """verif cfg prod"""
+        if not os.environ.get('SECRET_KEY'):
+            raise ValueError(
+                "SECRET_KEY non definie en prod "
+                "Definissez la variable env SECRET_KEY."
+            )
+        # DATABASE_URL prod
+        if not os.environ.get('DATABASE_URL'):
+            raise ValueError(
+                "DATABASE_URL non definie en production ! "
+                "Definissez la variable d'environnement DATABASE_URL."
             )
 
-
-# Dictionnaire des configurations
+# dict configs
 config = {
     'development': DevelopmentConfig,
     'testing': TestingConfig,

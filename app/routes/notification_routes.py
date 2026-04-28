@@ -1,7 +1,4 @@
-"""
-Routes de gestion des notifications
-FamiliDocs v2.0 - Amelioration BTS SIO SLAM
-"""
+# routes notifs
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 
@@ -15,7 +12,7 @@ notification_bp = Blueprint('notification', __name__, url_prefix='/notifications
 @notification_bp.route('/')
 @login_required
 def list_notifications():
-    """Affiche toutes les notifications de l'utilisateur"""
+    """liste notifs user"""
     page = request.args.get('page', 1, type=int)
     filter_type = request.args.get('type', '')
     unread_only = request.args.get('unread', '') == '1'
@@ -28,7 +25,7 @@ def list_notifications():
     if unread_only:
         query = query.filter_by(is_read=False)
 
-    # Exclure les expirees
+    # exclure expirees
     from datetime import datetime
     query = query.filter(
         db.or_(
@@ -41,7 +38,7 @@ def list_notifications():
         page=page, per_page=20, error_out=False
     )
 
-    # Statistiques
+    # stats
     stats = {
         'total': Notification.query.filter_by(user_id=current_user.id).count(),
         'unread': Notification.get_unread_count(current_user.id)
@@ -60,7 +57,7 @@ def list_notifications():
 @notification_bp.route('/count')
 @login_required
 def get_count():
-    """API: Retourne le nombre de notifications non lues (pour AJAX)"""
+    """API nb notifs non lues"""
     count = Notification.get_unread_count(current_user.id)
     return jsonify({'count': count})
 
@@ -68,10 +65,10 @@ def get_count():
 @notification_bp.route('/summary')
 @login_required
 def get_summary():
-    """API: Retourne un resume des notifications"""
+    """API resume notifs"""
     summary = NotificationService.get_notification_summary(current_user.id)
 
-    # Convertir les objets en dict pour JSON
+    # convert dict pr JSON
     summary['recent'] = [{
         'id': n.id,
         'type': n.type,
@@ -89,7 +86,7 @@ def get_summary():
 @notification_bp.route('/recent')
 @login_required
 def get_recent():
-    """API: Retourne les notifications recentes pour le dropdown"""
+    """API notifs recentes dropdown"""
     notifications = Notification.get_user_notifications(
         current_user.id,
         unread_only=False,
@@ -115,7 +112,7 @@ def get_recent():
 
 
 def _get_notification_url(notification):
-    """Construit l'URL associee a une notification"""
+    """url notif"""
     if notification.task_id:
         return url_for('task.view', task_id=notification.task_id)
     elif notification.document_id:
@@ -126,7 +123,7 @@ def _get_notification_url(notification):
 @notification_bp.route('/<int:notification_id>/read', methods=['POST'])
 @login_required
 def mark_as_read(notification_id):
-    """Marque une notification comme lue"""
+    """marque notif lue"""
     notification = Notification.query.get_or_404(notification_id)
 
     if notification.user_id != current_user.id:
@@ -138,7 +135,7 @@ def mark_as_read(notification_id):
     if request.is_json:
         return jsonify({'success': True})
 
-    # Rediriger vers l'element lie si existe
+    # redir element lie
     redirect_url = _get_notification_url(notification)
     return redirect(redirect_url)
 
@@ -146,7 +143,7 @@ def mark_as_read(notification_id):
 @notification_bp.route('/<int:notification_id>/unread', methods=['POST'])
 @login_required
 def mark_as_unread(notification_id):
-    """Marque une notification comme non lue"""
+    """marque notif non lue"""
     notification = Notification.query.get_or_404(notification_id)
 
     if notification.user_id != current_user.id:
@@ -164,7 +161,7 @@ def mark_as_unread(notification_id):
 @notification_bp.route('/read-all', methods=['POST'])
 @login_required
 def mark_all_as_read():
-    """Marque toutes les notifications comme lues"""
+    """tout marquer lu"""
     Notification.mark_all_as_read(current_user.id)
 
     if request.is_json:
@@ -177,7 +174,7 @@ def mark_all_as_read():
 @notification_bp.route('/<int:notification_id>/delete', methods=['POST'])
 @login_required
 def delete_notification(notification_id):
-    """Supprime une notification"""
+    """suppr notif"""
     notification = Notification.query.get_or_404(notification_id)
 
     if notification.user_id != current_user.id:
@@ -199,7 +196,7 @@ def delete_notification(notification_id):
 @notification_bp.route('/delete-read', methods=['POST'])
 @login_required
 def delete_read_notifications():
-    """Supprime toutes les notifications lues"""
+    """suppr notifs lues"""
     deleted = Notification.query.filter_by(
         user_id=current_user.id,
         is_read=True
@@ -217,10 +214,7 @@ def delete_read_notifications():
 @notification_bp.route('/check-due', methods=['POST'])
 @login_required
 def check_due_notifications():
-    """
-    Verifie et cree les notifications pour echeances.
-    Route admin ou cron job.
-    """
+    """check echeances cree notifs"""
     if not current_user.is_admin():
         return jsonify({'error': 'Admin requis'}), 403
 
@@ -236,7 +230,7 @@ def check_due_notifications():
 @notification_bp.route('/cleanup', methods=['POST'])
 @login_required
 def cleanup_notifications():
-    """Nettoie les anciennes notifications (admin)"""
+    """cleanup notifs (admin)"""
     if not current_user.is_admin():
         return jsonify({'error': 'Admin requis'}), 403
 

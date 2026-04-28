@@ -1,4 +1,6 @@
-# Schema de Base de Donnees - FamiliDocs v2.1
+# Schema de Base de Donnees - FamiliDocs v2.3
+
+> Base partagee entre la version web (Flask) et la version desktop (CustomTkinter)
 
 ## Modele Conceptuel de Donnees (MCD)
 
@@ -105,6 +107,8 @@ Stocke les informations des utilisateurs de l'application.
 | is_active | BOOLEAN | Compte actif |
 | profile_photo | VARCHAR(255) | Chemin vers photo de profil |
 | family_title | VARCHAR(50) | Titre familial (Papa, Maman, etc.) |
+| totp_secret | VARCHAR(32) | Secret TOTP pour la 2FA (nullable) |
+| is_2fa_enabled | BOOLEAN | 2FA activee (defaut: false) |
 | created_at | DATETIME | Date de creation |
 | updated_at | DATETIME | Date de modification |
 | last_login | DATETIME | Derniere connexion |
@@ -204,7 +208,7 @@ Gere les notifications temps reel des utilisateurs.
 |---------|------|-------------|
 | id | INTEGER | Cle primaire |
 | user_id | INTEGER | FK vers users |
-| type | VARCHAR(50) | Type (11 types disponibles) |
+| type | VARCHAR(50) | Type (12 types disponibles) |
 | title | VARCHAR(200) | Titre |
 | message | TEXT | Contenu |
 | priority | VARCHAR(20) | low/normal/high/urgent |
@@ -281,7 +285,7 @@ Association utilisateur-famille avec role hierarchique.
 **Roles disponibles** :
 | Role | Description |
 |------|-------------|
-| chef_famille | Administration complete (max 2 par famille) |
+| responsable | Administration complete (max 2 par famille) |
 | admin | Gestion complete |
 | parent | Gestion documents et taches |
 | gestionnaire | Ajout/suppression de documents |
@@ -354,3 +358,36 @@ Chat familial avec systeme d'annonces.
 - `permissions(document_id, user_id)` : Contrainte d'unicite
 - `tags(name, owner_id)` : Contrainte d'unicite
 - `family_members(family_id, user_id)` : Contrainte d'unicite
+
+## Analyse de Normalisation
+
+Le schema respecte les trois premieres formes normales (3FN), garantissant l'absence de redondance et d'anomalies de mise a jour.
+
+### Premiere forme normale (1FN)
+
+Une relation est en 1FN si tous ses attributs sont **atomiques** (une seule valeur indivisible par cellule, pas de listes implicites).
+
+**Verification** : tous les champs des 14 tables sont atomiques.
+- Exemple : un email est une chaine unique (`'jean@email.com'`), pas une liste d'emails dans une cellule
+- Les tags d'un document ne sont **pas** stockes en chaine concatenee `"impot,2026,urgent"` : ils passent par la table d'association `document_tags`
+- Les permissions d'un document ne sont pas un champ JSON : chaque permission est une ligne dans la table `permissions`
+
+### Deuxieme forme normale (2FN)
+
+Une relation est en 2FN si elle est en 1FN ET si tous les attributs non-cles dependent de la **cle primaire complete** (et non d'une partie seulement, dans le cas d'une cle composite).
+
+**Verification** : la quasi-totalite des tables ont une cle primaire simple (`id` auto-increment), donc la 2FN est triviale.
+- Pour les rares tables a cle composite logique (`document_tags(document_id, tag_id)`), la table ne contient pas d'attribut additionnel qui dependrait d'une seule des deux cles. Seul `created_at` est present, et il appartient a l'association complete (pas a `document_id` seul ni `tag_id` seul).
+
+### Troisieme forme normale (3FN)
+
+Une relation est en 3FN si elle est en 2FN ET s'il n'y a **aucune dependance transitive** entre attributs non-cles.
+
+**Verification** : aucun champ d'une table ne se calcule a partir d'un autre champ non-cle de la meme table.
+- Exemple `documents` : `file_type` n'est pas deduit de `original_filename` cote BDD (il pourrait l'etre, mais on le stocke explicitement pour pouvoir l'indexer et le filtrer ; ce n'est pas une violation 3FN puisqu'il n'y a pas de fonction stricte BDD)
+- `folders.category` ne depend que de `folders.id`, pas de `folders.owner_id` ni d'autres
+- Les noms et titres des utilisateurs ne sont pas dupliques dans `documents` ou `tasks` : on stocke une cle etrangere `owner_id`, et le nom complet est obtenu par jointure (`SELECT u.first_name FROM documents JOIN users u ON documents.owner_id = u.id`)
+
+### Cas particulier : redondance volontaire pour la performance
+
+Aucune denormalisation n'a ete introduite. Toutes les statistiques (compteur de documents par dossier, nombre de membres dans une famille, etc.) sont calculees a la volee via des methodes Python (`Folder.document_count`, `Family.member_count`) plutot que stockees, ce qui garantit la coherence sans cout supplementaire au vu de la volumetrie attendue.

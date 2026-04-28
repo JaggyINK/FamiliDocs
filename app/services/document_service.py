@@ -6,7 +6,6 @@ from flask import current_app
 
 from app.models import db
 from app.models.document import Document
-from app.models.folder import Folder
 from app.models.log import Log
 from app.models.task import Task
 
@@ -98,7 +97,7 @@ class DocumentService:
             db.session.add(document)
             db.session.commit()
 
-            # T8 - Chiffrement AES si confidentialite 'private'
+            # chiffrement auto si doc prive
             if confidentiality == 'private':
                 try:
                     from app.services.encryption_service import EncryptionService
@@ -130,18 +129,22 @@ class DocumentService:
 
             return True, document
 
-        except Exception as e:
+        except (IOError, OSError, ValueError) as e:
             # Nettoyage si erreur
             if os.path.exists(file_path):
                 os.remove(file_path)
             db.session.rollback()
-            return False, f"Erreur lors de l'upload: {str(e)}"
+            return False, f"Erreur upload: {e}"
 
     @staticmethod
     def get_document_path(document: Document) -> str:
-        """chemin complet du fichier"""
-        upload_folder = current_app.config.get('UPLOAD_FOLDER')
-        return os.path.join(upload_folder, document.stored_filename)
+        """chemin complet du fichier avec protection path traversal"""
+        upload_folder = os.path.realpath(current_app.config.get('UPLOAD_FOLDER'))
+        file_path = os.path.realpath(os.path.join(upload_folder, document.stored_filename))
+        # Protection path traversal : le fichier doit rester dans le dossier uploads
+        if not file_path.startswith(upload_folder):
+            raise ValueError("Tentative d'acces a un fichier hors du dossier uploads")
+        return file_path
 
     @staticmethod
     def delete_document(document: Document, user=None) -> tuple:
@@ -169,11 +172,11 @@ class DocumentService:
                 )
                 db.session.commit()
 
-            return True, "Document supprimé avec succès"
+            return True, "Document supprime"
 
         except Exception as e:
             db.session.rollback()
-            return False, f"Erreur lors de la suppression: {str(e)}"
+            return False, f"Erreur suppression: {e}"
 
     @staticmethod
     def update_document(document: Document, name: str = None,
@@ -204,7 +207,6 @@ class DocumentService:
                 document.expiry_date = expiry_date
                 changes.append(f"échéance: {expiry_date}")
 
-            # N2 - Date de revision
             if next_review_date != document.next_review_date:
                 document.next_review_date = next_review_date
                 changes.append(f"prochaine révision: {next_review_date}")
@@ -223,11 +225,11 @@ class DocumentService:
                     )
                     db.session.commit()
 
-            return True, "Document mis à jour avec succès"
+            return True, "Document mis a jour"
 
         except Exception as e:
             db.session.rollback()
-            return False, f"Erreur lors de la mise à jour: {str(e)}"
+            return False, f"Erreur mise a jour: {e}"
 
     @staticmethod
     def get_user_documents_query(user_id: int, folder_id: int = None,

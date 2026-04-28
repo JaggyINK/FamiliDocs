@@ -7,9 +7,9 @@
 | **Nom du projet** | FamiliDocs |
 | **Type** | Application Web |
 | **Langage principal** | Python (Flask) |
-| **Base de donnees** | PostgreSQL (dev/prod), SQLite (tests/desktop) |
+| **Base de donnees** | PostgreSQL 16 (web et desktop partagent la meme BDD) |
 | **Contexte** | Gestion documentaire familiale |
-| **Version** | 2.1 |
+| **Version** | 2.3 |
 
 ## Competences Couvertes
 
@@ -18,17 +18,17 @@
 | Competence | Description | Realisation |
 |------------|-------------|-------------|
 | Gerer le patrimoine informatique | Documentation technique et utilisateur | Schema BDD, documentation technique, tableau E5, `.env.example` |
-| Repondre aux incidents | Journalisation des erreurs | Module de logs (21 actions), pages erreur 403/404/500, logging Python |
+| Repondre aux incidents | Journalisation des erreurs | Module de logs (27 actions), pages erreur 403/404/500, logging Python |
 | Developper la presence en ligne | Interface web responsive | Templates Bootstrap 5.3, design adaptatif |
-| Travailler en mode projet | Organisation du code | Structure MVC, Git, 257 tests, suivi ameliorations |
+| Travailler en mode projet | Organisation du code | Structure MVC, Git, 307 tests, suivi ameliorations |
 
 ### Bloc 2 - Conception et developpement d'applications
 
 | Competence | Description | Realisation |
 |------------|-------------|-------------|
-| Concevoir une solution applicative | Architecture logicielle | Pattern MVC, 7 services, 13 modeles, 10 blueprints |
+| Concevoir une solution applicative | Architecture logicielle | Pattern MVC, 8 services, 13 modeles, 10 blueprints |
 | Developper une solution applicative | Code Python/Flask | Routes, services, modeles SQLAlchemy, chat familial |
-| Gerer les donnees | Base de donnees relationnelle | Schema 15 tables, ORM SQLAlchemy, relations 1:N/N:N |
+| Gerer les donnees | Base de donnees relationnelle | Schema 14 tables, ORM SQLAlchemy, relations 1:N/N:N |
 | Proteger les donnees | Securite applicative | Hashage bcrypt, chiffrement AES, CSRF, sessions securisees |
 
 ### Bloc 3 - Cybersecurite des services informatiques
@@ -79,8 +79,8 @@
 
 ### Gestion familiale (v2.1)
 - [x] Creation de groupes familiaux
-- [x] 8 roles hierarchiques (chef_famille -> invite)
-- [x] Limite 2 chefs de famille par foyer
+- [x] 8 roles hierarchiques (responsable -> invite)
+- [x] Limite 2 responsables par foyer
 - [x] Invitations intelligentes (lien sans connexion)
 - [x] Rejoindre famille a l'inscription
 - [x] Revocation automatique a la sortie
@@ -94,7 +94,7 @@
 
 ### Notifications (v2.0)
 - [x] Notifications temps reel (AJAX)
-- [x] 11 types de notifications
+- [x] 12 types de notifications
 - [x] Priorites avec code couleur
 - [x] Rafraichissement automatique (60s)
 - [x] Support email (simule en dev, logging en prod)
@@ -127,19 +127,25 @@
 
 ### Securite
 - [x] Hashage bcrypt des mots de passe
+- [x] Validation de force du mot de passe avec indicateur visuel temps reel (v2.3)
+- [x] Authentification a deux facteurs 2FA/TOTP avec QR code (v2.3)
 - [x] Protection CSRF
-- [x] Sessions securisees (HttpOnly, SameSite)
+- [x] Sessions securisees (HttpOnly, SameSite, Secure en production)
 - [x] Validation des entrees (serveur)
-- [x] Journalisation des actions (21 types)
+- [x] Journalisation des actions (27 types)
 - [x] Limitation de tentatives de connexion (v2.0)
-- [x] En-tetes HTTP de securite (5 headers) (v2.0)
+- [x] En-tetes HTTP de securite (7 headers dont CSP et HSTS) (v2.3)
 - [x] Politique de mot de passe stricte (v2.0)
+- [x] Protection path traversal sur les telechargements (v2.3)
 - [x] Pages d'erreur personnalisees (403/404/500) (v2.1)
 - [x] Logging applicatif structure (v2.1)
 - [x] Cle secrete auto-generee (v2.1)
+- [x] Validation obligatoire SECRET_KEY et DATABASE_URL en production (v2.3)
+- [x] Retention logs RGPD 180 jours par defaut (v2.3)
+- [x] Notifications email configurables via variables d'environnement (v2.3)
 
 ### Tests (v2.1)
-- [x] 302 tests automatises
+- [x] 307 tests automatises
 - [x] Tests modeles (102 tests)
 - [x] Tests services (28 tests)
 - [x] Tests routes (30 tests)
@@ -160,42 +166,59 @@
 | Chiffrement | cryptography | 41.0 |
 | Frontend | Bootstrap | 5.3 |
 | Base de donnees | PostgreSQL (dev/prod) | 16+ |
-| Base de donnees (tests) | SQLite en memoire | 3 |
+| Moteur de tests | SQLite en memoire (uniquement pour pytest) | 3 |
 | Tests | pytest | 7.4 |
 
 ## Livrables
 
 | Livrable | Format | Description |
 |----------|--------|-------------|
-| Code source | Python | Application complete (13 modeles, 7 services, 10 blueprints) |
-| Base de donnees | SQLite | Schema 15 tables avec relations |
+| Code source | Python | Application complete (13 modeles, 8 services, 10 blueprints) |
+| Base de donnees | PostgreSQL | Schema 14 tables avec relations |
 | Schema BDD | Markdown | MCD et description detaillee des tables |
 | Documentation technique | Markdown | Architecture, API, securite, deploiement |
 | Tableau E5 | Markdown | Ce document |
-| Tests | Python | 302 tests automatises (11 fichiers) |
+| Tests | Python | 307 tests automatises (14 fichiers) |
 | Suivi ameliorations | Markdown | Historique detaille des phases |
 | `.env.example` | Dotenv | Configuration des variables d'environnement |
 
 ## Points Forts du Projet
 
-1. **Architecture solide** : 13 modeles, 7 services, 10 blueprints (MVC strict)
+1. **Architecture solide** : 13 modeles, 8 services, 10 blueprints (MVC strict)
 2. **Securite multi-couches** : bcrypt, CSRF, rate limiting, headers HTTP, validation serveur
 3. **Gestion familiale complete** : 8 roles, invitations smart, chat, assignation taches
 4. **Versioning documents** : Tracabilite complete des modifications
 5. **Tags et recherche avancee** : Organisation flexible multi-criteres
-6. **Notifications temps reel** : AJAX, 11 types, rafraichissement auto
+6. **Notifications temps reel** : AJAX, 12 types, rafraichissement auto
 7. **Dashboard statistiques** : Graphiques, indicateurs, alertes
-8. **302 tests automatises** : Modeles, services, routes, integration, securite, RGPD
+8. **307 tests automatises** : Modeles, services, routes, integration, securite, RGPD
 9. **Documentation technique** : Complete et detaillee (3 documents)
 10. **Pages d'erreur personnalisees** et logging structure
 
+### Donnees de demonstration (v2.3)
+- [x] Script `seed_demo_data.py` : famille Dupont complete (5 membres)
+- [x] 20 documents realistes avec fichiers physiques
+- [x] 19 partages croises entre membres (couple, parent-enfant, grand-pere-petite-fille)
+- [x] 9 taches, 8 tags, 14 messages chat, 10 notifications
+- [x] Fichier `DEMO_IDENTIFIANTS.txt` avec tous les comptes
+
+### Application desktop native (v2.3)
+- [x] Interface CustomTkinter partageant la meme BDD PostgreSQL
+- [x] Documents : vue dossiers en grille, tri, filtre, recherche, onglet partages
+- [x] Partages : selection membres, droits, duree (1 sem/30j/1 an/permanent), revocation
+- [x] Taches : 3 onglets (mes taches, assignees par moi, terminees), detail cliquable
+- [x] Famille : membres + dashboard taches avec stats, barres progression, recommandations
+- [x] Chat familial integre avec bulles de messages
+- [x] Gestion utilisateurs : changement de roles famille
+- [x] Assignation de taches entre membres de la famille
+
 ## Axes d'Amelioration
 
-1. Application mobile native
+1. Application mobile native (iOS/Android)
 2. Integration cloud (AWS/GCP)
 3. Signature electronique
 4. Reconnaissance optique de caracteres (OCR)
-5. Notifications par email reel (SMTP)
+5. Notifications par email en production (SMTP configure)
 
 ## Contexte BTS SIO SLAM
 
@@ -204,5 +227,5 @@ Ce projet repond aux exigences de l'epreuve E5 :
 - Utilisation de technologies actuelles
 - Respect des bonnes pratiques de developpement
 - Documentation technique exhaustive
-- Tests et validation (302 tests automatises)
+- Tests et validation (307 tests automatises)
 - Securite applicative multi-couches

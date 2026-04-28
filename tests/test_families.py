@@ -49,7 +49,7 @@ class TestFamilyMembers:
         member = FamilyMember(
             family_id=test_family.id,
             user_id=second_user.id,
-            role='member'
+            role='lecteur'
         )
         db.session.add(member)
         db.session.commit()
@@ -62,14 +62,14 @@ class TestFamilyMembers:
             user_id=test_user.id
         ).first()
         assert member is not None
-        assert member.role == 'chef_famille'
+        assert member.role == 'responsable'
 
     def test_exclude_member(self, app, test_user, second_user, test_family):
         """Test exclusion d'un membre"""
         member = FamilyMember(
             family_id=test_family.id,
             user_id=second_user.id,
-            role='member'
+            role='lecteur'
         )
         db.session.add(member)
         db.session.commit()
@@ -92,7 +92,7 @@ class TestFamilyInvitation:
         link = ShareLink.create_share_link(
             family_id=test_family.id,
             created_by=test_user.id,
-            granted_role='member',
+            granted_role='lecteur',
             max_uses=5
         )
         db.session.commit()
@@ -106,7 +106,7 @@ class TestFamilyInvitation:
             token=ShareLink.generate_token(),
             family_id=test_family.id,
             created_by=test_user.id,
-            granted_role='member',
+            granted_role='lecteur',
             expires_at=datetime.utcnow() - timedelta(hours=1)
         )
         db.session.add(link)

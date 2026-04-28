@@ -1,7 +1,4 @@
-"""
-Service de planification des taches automatiques
-FamiliDocs - Scheduler daemon thread
-"""
+# scheduler taches auto (daemon thread)
 import threading
 import logging
 import schedule
@@ -11,25 +8,25 @@ logger = logging.getLogger(__name__)
 
 
 class SchedulerService:
-    """Service de planification des taches periodiques"""
+    """scheduler taches periodiques"""
 
     _thread = None
     _running = False
 
     @staticmethod
     def start(app):
-        """Demarre le scheduler dans un thread daemon"""
+        """start scheduler thread"""
         if SchedulerService._running:
             return
 
         SchedulerService._running = True
 
-        # Planifier les jobs
+        # jobs planifies
         schedule.every(1).hours.do(SchedulerService._check_deadlines, app)
         schedule.every().day.at("02:00").do(SchedulerService._cleanup_notifications, app)
         schedule.every().day.at("03:00").do(SchedulerService._cleanup_expired_permissions, app)
 
-        # Lancer le thread daemon
+        # thread daemon
         SchedulerService._thread = threading.Thread(
             target=SchedulerService._run_loop,
             daemon=True,
@@ -40,20 +37,20 @@ class SchedulerService:
 
     @staticmethod
     def _run_loop():
-        """Boucle principale du scheduler"""
+        """boucle scheduler"""
         while SchedulerService._running:
             schedule.run_pending()
             time.sleep(60)
 
     @staticmethod
     def stop():
-        """Arrete le scheduler"""
+        """stop scheduler"""
         SchedulerService._running = False
         schedule.clear()
 
     @staticmethod
     def _check_deadlines(app):
-        """Verifie les echeances de taches et documents"""
+        """check echeances taches + docs"""
         try:
             with app.app_context():
                 from app.services.notification_service import NotificationService
@@ -65,7 +62,7 @@ class SchedulerService:
 
     @staticmethod
     def _cleanup_notifications(app):
-        """Nettoie les anciennes notifications"""
+        """cleanup notifs"""
         try:
             with app.app_context():
                 from app.services.notification_service import NotificationService
@@ -76,7 +73,7 @@ class SchedulerService:
 
     @staticmethod
     def _cleanup_expired_permissions(app):
-        """Nettoie les permissions expirees"""
+        """cleanup perm expirees"""
         try:
             with app.app_context():
                 from app.models.permission import Permission

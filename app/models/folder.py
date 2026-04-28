@@ -1,12 +1,10 @@
-"""
-Modèle Dossier - Gestion des dossiers de documents
-"""
+# modele dossier
 from datetime import datetime
 from . import db
 
 
 class Folder(db.Model):
-    """Modèle représentant un dossier de documents"""
+    """table dossiers"""
 
     __tablename__ = 'folders'
 
@@ -19,22 +17,22 @@ class Folder(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relations
     documents = db.relationship('Document', backref='folder', lazy='dynamic')
     subfolders = db.relationship('Folder', backref=db.backref('parent', remote_side=[id]),
-                                 lazy='dynamic')
+                                 lazy='dynamic',
+                                 cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Folder {self.name}>'
 
     @property
     def document_count(self):
-        """Retourne le nombre de documents dans le dossier"""
+        """nb docs dans dossier"""
         return self.documents.count()
 
     @property
     def total_size(self):
-        """Retourne la taille totale des documents du dossier"""
+        """taille totale docs"""
         total = 0
         for doc in self.documents:
             if doc.file_size:
@@ -42,17 +40,23 @@ class Folder(db.Model):
         return total
 
     def get_path(self):
-        """Retourne le chemin complet du dossier"""
+        """chemin complet dossier"""
         path = [self.name]
         parent = self.parent
+        max_depth = 20
+        depth = 0
         while parent:
+            depth += 1
+            if depth > max_depth:
+                path.insert(0, '...')
+                break
             path.insert(0, parent.name)
             parent = parent.parent
         return ' / '.join(path)
 
     @staticmethod
     def create_default_folders(user_id):
-        """Crée les dossiers par défaut pour un nouvel utilisateur"""
+        """cree dossiers par defaut nouvel user"""
         from app.config import Config
 
         folders = []

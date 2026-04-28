@@ -1,50 +1,29 @@
-"""
-Service de chiffrement des documents sensibles
-"""
+# service chiffrement docs
 import os
-import base64
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.fernet import Fernet, InvalidToken
 from flask import current_app
 
 
 class EncryptionService:
-    """Service pour le chiffrement et déchiffrement des documents"""
+    """chiffrement / dechiffrement docs (AES via Fernet)"""
 
     @staticmethod
-    def generate_key() -> bytes:
-        """Génère une nouvelle clé de chiffrement"""
+    def generate_key():
+        """genere une nouvelle cle Fernet"""
         return Fernet.generate_key()
 
     @staticmethod
-    def derive_key_from_password(password: str, salt: bytes = None) -> tuple:
+    def get_encryption_key():
+        """recup la cle (env ou fichier .encryption_key)
+
+        en prod la cle devrait venir d'un coffre type Vault/KMS,
+        ici on fait simple : ENCRYPTION_KEY dans .env, sinon
+        on genere et on stocke dans .encryption_key (gitignore).
         """
-        Dérive une clé de chiffrement à partir d'un mot de passe
-        Retourne (key, salt)
-        """
-        if salt is None:
-            salt = os.urandom(16)
-
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-        )
-
-        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
-        return key, salt
-
-    @staticmethod
-    def get_encryption_key() -> bytes:
-        """Recupere la cle de chiffrement depuis la configuration ou la genere de facon persistante"""
         key = current_app.config.get('ENCRYPTION_KEY')
         if key:
             return key.encode() if isinstance(key, str) else key
 
-        # Generer une cle persistante si aucune n'est configuree
-        import os
         key_file = os.path.join(
             os.path.dirname(current_app.config.get('UPLOAD_FOLDER', '')),
             '.encryption_key'
@@ -53,143 +32,58 @@ class EncryptionService:
             with open(key_file, 'rb') as f:
                 return f.read().strip()
 
-        # Premiere utilisation : generer et sauvegarder la cle
+        # premiere utilisation : on genere et on sauvegarde
         new_key = Fernet.generate_key()
         os.makedirs(os.path.dirname(key_file), exist_ok=True)
         with open(key_file, 'wb') as f:
             f.write(new_key)
-        current_app.logger.info("Cle de chiffrement generee et sauvegardee dans .encryption_key")
+        current_app.logger.info("Cle de chiffrement generee dans .encryption_key")
         return new_key
 
     @staticmethod
-    def encrypt_file(file_path: str, key: bytes = None) -> tuple:
-        """
-        Chiffre un fichier
-        Retourne (success, encrypted_path_or_error)
-        """
+    def encrypt_file(file_path, key=None):
+        """chiffre un fichier sur disque, supprime l'original"""
         if key is None:
             key = EncryptionService.get_encryption_key()
-
         try:
             fernet = Fernet(key)
-
-            # Lecture du fichier original
             with open(file_path, 'rb') as f:
                 data = f.read()
-
-            # Chiffrement
-            encrypted_data = fernet.encrypt(data)
-
-            # Écriture du fichier chiffré
+            encrypted = fernet.encrypt(data)
             encrypted_path = file_path + '.enc'
             with open(encrypted_path, 'wb') as f:
-                f.write(encrypted_data)
-
-            # Suppression du fichier original
+                f.write(encrypted)
             os.remove(file_path)
-
             return True, encrypted_path
-
-        except Exception as e:
-            return False, f"Erreur lors du chiffrement: {str(e)}"
+        except (IOError, OSError, ValueError, InvalidToken) as e:
+            return False, f"Erreur chiffrement: {e}"
 
     @staticmethod
-    def decrypt_file(encrypted_path: str, key: bytes = None) -> tuple:
-        """
-        Déchiffre un fichier
-        Retourne (success, decrypted_path_or_error)
-        """
+    def decrypt_file(encrypted_path, key=None):
+        """dechiffre un fichier vers le disque"""
         if key is None:
             key = EncryptionService.get_encryption_key()
-
         try:
             fernet = Fernet(key)
-
-            # Lecture du fichier chiffré
             with open(encrypted_path, 'rb') as f:
-                encrypted_data = f.read()
-
-            # Déchiffrement
-            decrypted_data = fernet.decrypt(encrypted_data)
-
-            # Écriture du fichier déchiffré
+                encrypted = f.read()
+            decrypted = fernet.decrypt(encrypted)
             decrypted_path = encrypted_path.replace('.enc', '')
             with open(decrypted_path, 'wb') as f:
-                f.write(decrypted_data)
-
+                f.write(decrypted)
             return True, decrypted_path
-
-        except Exception as e:
-            return False, f"Erreur lors du déchiffrement: {str(e)}"
+        except (IOError, OSError, ValueError, InvalidToken) as e:
+            return False, f"Erreur dechiffrement: {e}"
 
     @staticmethod
-    def decrypt_to_memory(encrypted_path: str, key: bytes = None) -> tuple:
-        """
-        Déchiffre un fichier en mémoire sans l'écrire sur disque
-        Retourne (success, data_or_error)
-        """
+    def decrypt_to_memory(encrypted_path, key=None):
+        """dechiffre directement en memoire (pas d'ecriture disque)"""
         if key is None:
             key = EncryptionService.get_encryption_key()
-
         try:
             fernet = Fernet(key)
-
             with open(encrypted_path, 'rb') as f:
-                encrypted_data = f.read()
-
-            decrypted_data = fernet.decrypt(encrypted_data)
-            return True, decrypted_data
-
-        except Exception as e:
-            return False, f"Erreur lors du déchiffrement: {str(e)}"
-
-    @staticmethod
-    def encrypt_data(data: bytes, key: bytes = None) -> tuple:
-        """
-        Chiffre des données en mémoire
-        Retourne (success, encrypted_data_or_error)
-        """
-        if key is None:
-            key = EncryptionService.get_encryption_key()
-
-        try:
-            fernet = Fernet(key)
-            encrypted_data = fernet.encrypt(data)
-            return True, encrypted_data
-
-        except Exception as e:
-            return False, f"Erreur lors du chiffrement: {str(e)}"
-
-    @staticmethod
-    def decrypt_data(encrypted_data: bytes, key: bytes = None) -> tuple:
-        """
-        Déchiffre des données en mémoire
-        Retourne (success, decrypted_data_or_error)
-        """
-        if key is None:
-            key = EncryptionService.get_encryption_key()
-
-        try:
-            fernet = Fernet(key)
-            decrypted_data = fernet.decrypt(encrypted_data)
-            return True, decrypted_data
-
-        except Exception as e:
-            return False, f"Erreur lors du déchiffrement: {str(e)}"
-
-    @staticmethod
-    def encrypt_string(text: str, key: bytes = None) -> str:
-        """Chiffre une chaîne de caractères et retourne le résultat en base64"""
-        success, result = EncryptionService.encrypt_data(text.encode(), key)
-        if success:
-            return base64.urlsafe_b64encode(result).decode()
-        raise ValueError(result)
-
-    @staticmethod
-    def decrypt_string(encrypted_text: str, key: bytes = None) -> str:
-        """Déchiffre une chaîne de caractères encodée en base64"""
-        encrypted_data = base64.urlsafe_b64decode(encrypted_text.encode())
-        success, result = EncryptionService.decrypt_data(encrypted_data, key)
-        if success:
-            return result.decode()
-        raise ValueError(result)
+                encrypted = f.read()
+            return True, fernet.decrypt(encrypted)
+        except (IOError, OSError, ValueError, InvalidToken) as e:
+            return False, f"Erreur dechiffrement: {e}"

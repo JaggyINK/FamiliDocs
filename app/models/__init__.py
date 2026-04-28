@@ -1,6 +1,4 @@
-"""
-Modèles de base de données FamiliDocs
-"""
+# init models bdd
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()

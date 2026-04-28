@@ -1,6 +1,4 @@
-"""
-Routes de gestion du versioning des documents
-"""
+# routes versioning docs
 import os
 from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
@@ -18,7 +16,7 @@ version_bp = Blueprint('version', __name__, url_prefix='/documents')
 @version_bp.route('/<int:document_id>/versions')
 @login_required
 def list_versions(document_id):
-    """Affiche l'historique des versions d'un document"""
+    """historique versions doc"""
     document = Document.query.get_or_404(document_id)
 
     if not current_user.can_access_document(document):
@@ -37,7 +35,7 @@ def list_versions(document_id):
 @version_bp.route('/<int:document_id>/versions/upload', methods=['POST'])
 @login_required
 def upload_version(document_id):
-    """Upload une nouvelle version du document"""
+    """upload nouvelle version"""
     document = Document.query.get_or_404(document_id)
 
     if not current_user.can_edit_document(document):
@@ -56,6 +54,19 @@ def upload_version(document_id):
 
     if not DocumentService.allowed_file(original_filename):
         flash('Type de fichier non autorise.', 'danger')
+        return redirect(url_for('version.list_versions', document_id=document_id))
+
+    # Validation du content-type (meme verification que l'upload initial)
+    allowed_mimes = {
+        'application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'image/jpeg', 'image/png', 'image/gif',
+        'text/plain', 'application/octet-stream'
+    }
+    if file.content_type and file.content_type not in allowed_mimes:
+        flash('Type de contenu non autorise.', 'danger')
         return redirect(url_for('version.list_versions', document_id=document_id))
 
     try:
@@ -127,11 +138,11 @@ def upload_version(document_id):
         )
 
         db.session.commit()
-        flash(f'Version {current_version_number + 1} uploadee avec succes.', 'success')
+        flash(f'Version {current_version_number + 1} uploadee.', 'success')
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Erreur lors de l\'upload: {str(e)}', 'danger')
+        flash(f'Erreur upload: {e}', 'danger')
 
     return redirect(url_for('version.list_versions', document_id=document_id))
 
@@ -139,7 +150,7 @@ def upload_version(document_id):
 @version_bp.route('/<int:document_id>/versions/<int:version_id>/download')
 @login_required
 def download_version(document_id, version_id):
-    """Telecharge une version specifique"""
+    """telecharge version"""
     document = Document.query.get_or_404(document_id)
 
     if not current_user.can_access_document(document):
@@ -159,6 +170,20 @@ def download_version(document_id, version_id):
         flash('Fichier introuvable.', 'danger')
         return redirect(url_for('version.list_versions', document_id=document_id))
 
+    # Dechiffrement si le document est chiffre
+    temp_decrypted = None
+    if document.is_encrypted:
+        from app.services.encryption_service import EncryptionService
+        success, result = EncryptionService.decrypt_to_memory(file_path)
+        if not success:
+            flash('Erreur lors du dechiffrement du document.', 'danger')
+            return redirect(url_for('version.list_versions', document_id=document_id))
+        import tempfile
+        temp_decrypted = tempfile.NamedTemporaryFile(delete=False, suffix='_' + version.original_filename)
+        temp_decrypted.write(result)
+        temp_decrypted.close()
+        file_path = temp_decrypted.name
+
     Log.create_log(
         user_id=current_user.id,
         action='document_download',
@@ -167,17 +192,33 @@ def download_version(document_id, version_id):
     )
     db.session.commit()
 
-    return send_file(
+    response = send_file(
         file_path,
         download_name=f"v{version.version_number}_{version.original_filename}",
         as_attachment=True
     )
 
+    # Nettoyage du fichier temporaire dechiffre
+    if temp_decrypted:
+        from flask import after_this_request
+        temp_path = temp_decrypted.name
+
+        @after_this_request
+        def cleanup(resp):
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except OSError:
+                pass
+            return resp
+
+    return response
+
 
 @version_bp.route('/<int:document_id>/versions/<int:version_id>/restore', methods=['POST'])
 @login_required
 def restore_version(document_id, version_id):
-    """Restaure une ancienne version comme version courante"""
+    """restaure ancienne version"""
     document = Document.query.get_or_404(document_id)
 
     if not current_user.can_edit_document(document):
@@ -219,7 +260,7 @@ def restore_version(document_id, version_id):
         )
 
         db.session.commit()
-        flash(f'Version v{version.version_number} restauree avec succes.', 'success')
+        flash(f'Version v{version.version_number} restauree.', 'success')
 
     except Exception as e:
         db.session.rollback()

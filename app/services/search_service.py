@@ -1,6 +1,4 @@
-"""
-Service de recherche avancee - Recherche multi-criteres
-"""
+# service recherche multi-criteres
 from sqlalchemy import or_, and_, func
 from datetime import date, timedelta
 
@@ -12,17 +10,14 @@ from app.models.task import Task
 
 
 class SearchService:
-    """Service pour la recherche avancee dans les documents et taches"""
+    """recherche docs taches"""
 
     @staticmethod
     def search_documents(user_id, query=None, file_type=None, folder_id=None,
                           tags=None, date_from=None, date_to=None,
                           confidentiality=None, expired_only=False,
                           sort_by='updated_at', sort_order='desc'):
-        """
-        Recherche avancee de documents avec filtres multiples.
-        Retourne une liste de documents correspondants.
-        """
+        """recherche docs filtres multiples"""
         base_query = Document.query.filter_by(owner_id=user_id)
 
         # Recherche textuelle (nom + description)
@@ -92,7 +87,7 @@ class SearchService:
                                 tags=None, date_from=None, date_to=None,
                                 confidentiality=None, expired_only=False,
                                 sort_by='updated_at', sort_order='desc'):
-        """Retourne la query de recherche (pour pagination)"""
+        """query recherche (pr pagination)"""
         base_query = Document.query.filter_by(owner_id=user_id)
 
         if query:
@@ -143,7 +138,7 @@ class SearchService:
     @staticmethod
     def search_tasks(user_id, query=None, status=None, priority=None,
                       overdue_only=False, date_from=None, date_to=None):
-        """Recherche avancee de taches"""
+        """recherche taches"""
         base_query = Task.query.filter_by(owner_id=user_id)
 
         if query:
@@ -176,10 +171,7 @@ class SearchService:
 
     @staticmethod
     def global_search(user_id, query):
-        """
-        Recherche globale dans documents et taches.
-        Retourne un dictionnaire avec les resultats par categorie.
-        """
+        """recherche globale docs + taches"""
         if not query or len(query) < 2:
             return {'documents': [], 'tasks': [], 'tags': []}
 
@@ -214,7 +206,7 @@ class SearchService:
 
     @staticmethod
     def get_statistics(user_id):
-        """Retourne des statistiques detaillees pour le dashboard"""
+        """stats detaillees dashboard"""
         today = date.today()
 
         # Recuperer tous les documents de l'utilisateur
@@ -310,7 +302,7 @@ class SearchService:
 
     @staticmethod
     def _format_size(size_bytes):
-        """Formate une taille en octets en format lisible"""
+        """format taille lisible"""
         if not size_bytes:
             return '0 o'
 

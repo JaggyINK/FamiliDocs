@@ -1,60 +1,53 @@
 /**
- * FamiliDocs - JavaScript principal
- * Coffre Administratif Numerique Familial
+ * FamiliDocs — Liquid Glass UI
+ * Animations, interactions & utilities
  */
 
-// Attendre que le DOM soit charge
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialisation des tooltips Bootstrap
     initTooltips();
-
-    // Auto-dismiss des alertes
     initAlertAutoDismiss();
-
-    // Confirmation de suppression
     initDeleteConfirmations();
-
-    // Preview du nom de fichier lors de l'upload
     initFileUploadPreview();
-
-    // Validation des formulaires
     initFormValidation();
-
-    // T18 - Progress bar upload
     initUploadProgress();
-
-    // T20 - Session expiry warning
     initSessionWarning();
-
-    // T34 - Raccourcis clavier
     initKeyboardShortcuts();
+    initScrollReveal();
+    initCardHoverEffects();
+    initSmoothTransitions();
+    initCountUp();
 });
 
 /**
- * Initialise les tooltips Bootstrap
+ * Bootstrap tooltips
  */
 function initTooltips() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    tooltipTriggerList.map(function (el) {
+        return new bootstrap.Tooltip(el);
     });
 }
 
 /**
- * Auto-dismiss des alertes apres 5 secondes
+ * Auto-dismiss alerts with fade out
  */
 function initAlertAutoDismiss() {
     var alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
     alerts.forEach(function(alert) {
         setTimeout(function() {
-            var bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        }, 5000);
+            alert.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-8px) scale(0.98)';
+            setTimeout(function() {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                bsAlert.close();
+            }, 400);
+        }, 4500);
     });
 }
 
 /**
- * Confirmation avant suppression
+ * Delete confirmations with custom styling
  */
 function initDeleteConfirmations() {
     var deleteButtons = document.querySelectorAll('[data-confirm-delete]');
@@ -70,7 +63,7 @@ function initDeleteConfirmations() {
 }
 
 /**
- * Preview du nom de fichier lors de l'upload
+ * File upload preview
  */
 function initFileUploadPreview() {
     var fileInputs = document.querySelectorAll('input[type="file"]');
@@ -79,13 +72,11 @@ function initFileUploadPreview() {
             var fileName = this.files[0] ? this.files[0].name : 'Aucun fichier selectionne';
             var nameInput = document.getElementById('name');
 
-            // Si le champ nom est vide, le remplir avec le nom du fichier (sans extension)
             if (nameInput && !nameInput.value) {
                 var fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
                 nameInput.value = fileNameWithoutExt;
             }
 
-            // Afficher le nom du fichier
             var label = this.nextElementSibling;
             if (label && label.classList.contains('custom-file-label')) {
                 label.textContent = fileName;
@@ -95,7 +86,7 @@ function initFileUploadPreview() {
 }
 
 /**
- * Validation des formulaires
+ * Form validation
  */
 function initFormValidation() {
     var forms = document.querySelectorAll('form.needs-validation');
@@ -111,7 +102,70 @@ function initFormValidation() {
 }
 
 /**
- * Fonction utilitaire pour afficher une notification
+ * Scroll reveal — fade in elements as they enter viewport
+ */
+function initScrollReveal() {
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.08,
+        rootMargin: '0px 0px -30px 0px'
+    });
+
+    // Observe cards, stat-cards, accordion items
+    var elements = document.querySelectorAll('.card, .stat-card, .accordion-item');
+    elements.forEach(function(el, i) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(16px)';
+        el.style.transition = 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) ' + (i * 0.06) + 's, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) ' + (i * 0.06) + 's';
+        observer.observe(el);
+    });
+}
+
+/**
+ * Enhanced card hover — subtle glass shimmer
+ */
+function initCardHoverEffects() {
+    var cards = document.querySelectorAll('.stat-card');
+    cards.forEach(function(card) {
+        card.addEventListener('mouseenter', function() {
+            this.style.willChange = 'transform, box-shadow';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.willChange = 'auto';
+        });
+    });
+}
+
+/**
+ * Smooth page transitions for internal links
+ */
+function initSmoothTransitions() {
+    // Add subtle press feedback to all buttons
+    var buttons = document.querySelectorAll('.btn');
+    buttons.forEach(function(btn) {
+        btn.addEventListener('mousedown', function() {
+            this.style.transform = 'scale(0.96)';
+        });
+        btn.addEventListener('mouseup', function() {
+            this.style.transform = '';
+        });
+        btn.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+}
+
+/**
+ * Show notification toast
  */
 function showNotification(message, type) {
     type = type || 'info';
@@ -121,20 +175,23 @@ function showNotification(message, type) {
     alertDiv.innerHTML = message +
         '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
 
-    var container = document.querySelector('.flash-container') || document.querySelector('.main-content') || document.querySelector('.container');
+    var container = document.querySelector('.flash-container') || document.querySelector('.main-content');
     if (container) {
         container.insertBefore(alertDiv, container.firstChild);
-
-        // Auto-dismiss apres 5 secondes
         setTimeout(function() {
-            var bsAlert = new bootstrap.Alert(alertDiv);
-            bsAlert.close();
-        }, 5000);
+            alertDiv.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            alertDiv.style.opacity = '0';
+            alertDiv.style.transform = 'translateY(-8px)';
+            setTimeout(function() {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+                bsAlert.close();
+            }, 400);
+        }, 4500);
     }
 }
 
 /**
- * Fonction pour copier du texte dans le presse-papier
+ * Copy to clipboard
  */
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(function() {
@@ -146,7 +203,7 @@ function copyToClipboard(text) {
 }
 
 /**
- * Fonction pour formater une date
+ * Format date
  */
 function formatDate(date) {
     var d = new Date(date);
@@ -157,7 +214,7 @@ function formatDate(date) {
 }
 
 /**
- * Fonction pour formater la taille d'un fichier
+ * Format file size
  */
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 o';
@@ -168,22 +225,20 @@ function formatFileSize(bytes) {
 }
 
 /**
- * Verification de la force du mot de passe
+ * Password strength check
  */
 function checkPasswordStrength(password) {
     var strength = 0;
-
     if (password.length >= 8) strength++;
     if (password.match(/[a-z]/)) strength++;
     if (password.match(/[A-Z]/)) strength++;
     if (password.match(/[0-9]/)) strength++;
     if (password.match(/[^a-zA-Z0-9]/)) strength++;
-
     return strength;
 }
 
 /**
- * T17 - Bulk selection pour documents
+ * Bulk selection for documents
  */
 function toggleBulkSelect(checkbox) {
     var bar = document.getElementById('bulkActionBar');
@@ -223,7 +278,7 @@ function clearBulk() {
 }
 
 /**
- * T18 - Progress bar pour upload de fichiers
+ * Upload progress bar
  */
 function initUploadProgress() {
     var uploadForms = document.querySelectorAll('form[enctype="multipart/form-data"]');
@@ -235,16 +290,18 @@ function initUploadProgress() {
             e.preventDefault();
             var formData = new FormData(form);
 
-            // Creer la barre de progression
             var progressWrap = document.createElement('div');
             progressWrap.className = 'progress mt-3';
-            progressWrap.innerHTML = '<div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>';
+            progressWrap.style.height = '8px';
+            progressWrap.innerHTML = '<div class="progress-bar" role="progressbar" style="width: 0%"></div>';
             form.appendChild(progressWrap);
             var progressBar = progressWrap.querySelector('.progress-bar');
 
-            // Desactiver le bouton submit
             var submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+            }
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', form.action, true);
@@ -253,33 +310,36 @@ function initUploadProgress() {
                 if (e.lengthComputable) {
                     var pct = Math.round((e.loaded / e.total) * 100);
                     progressBar.style.width = pct + '%';
-                    progressBar.textContent = pct + '%';
                 }
             };
 
             xhr.onload = function() {
                 if (xhr.status >= 200 && xhr.status < 400) {
-                    // Rediriger vers la reponse
-                    if (xhr.responseURL) {
-                        window.location.href = xhr.responseURL;
-                    } else {
-                        window.location.reload();
-                    }
+                    progressBar.style.background = 'linear-gradient(90deg, var(--color-success), #28b34c)';
+                    setTimeout(function() {
+                        if (xhr.responseURL) {
+                            window.location.href = xhr.responseURL;
+                        } else {
+                            window.location.reload();
+                        }
+                    }, 300);
                 } else {
-                    progressBar.classList.remove('progress-bar-animated');
-                    progressBar.classList.add('bg-danger');
-                    progressBar.textContent = 'Erreur';
-                    if (submitBtn) submitBtn.disabled = false;
+                    progressBar.style.background = 'var(--color-danger)';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '';
+                    }
                 }
             };
 
             xhr.onerror = function() {
-                progressBar.classList.add('bg-danger');
-                progressBar.textContent = 'Erreur reseau';
-                if (submitBtn) submitBtn.disabled = false;
+                progressBar.style.background = 'var(--color-danger)';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '';
+                }
             };
 
-            // Ajouter le CSRF token
             var csrfMeta = document.querySelector('meta[name="csrf-token"]');
             if (csrfMeta) {
                 xhr.setRequestHeader('X-CSRFToken', csrfMeta.getAttribute('content'));
@@ -291,37 +351,32 @@ function initUploadProgress() {
 }
 
 /**
- * T20 - Avertissement expiration de session (2h - 5min = 115min)
+ * Session expiry warning
  */
 function initSessionWarning() {
-    // Ne pas activer sur les pages non authentifiees
     if (!document.querySelector('.sidebar')) return;
 
-    var SESSION_DURATION = 120 * 60 * 1000; // 2h en ms
-    var WARNING_BEFORE = 5 * 60 * 1000; // 5 min avant
+    var SESSION_DURATION = 120 * 60 * 1000;
+    var WARNING_BEFORE = 5 * 60 * 1000;
 
     setTimeout(function() {
-        var toast = document.createElement('div');
-        toast.className = 'alert alert-warning alert-dismissible fade show position-fixed';
-        toast.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        toast.innerHTML = '<i class="bi bi-clock me-2"></i><strong>Session bientot expiree</strong><br>Votre session expire dans 5 minutes. Sauvegardez votre travail.' +
-            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-        document.body.appendChild(toast);
+        showNotification(
+            '<i class="bi bi-clock me-2"></i><strong>Session bientot expiree</strong><br>Votre session expire dans 5 minutes.',
+            'warning'
+        );
     }, SESSION_DURATION - WARNING_BEFORE);
 }
 
 /**
- * T34 - Raccourcis clavier
+ * Keyboard shortcuts
  */
 function initKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
-        // Ctrl+K : focus recherche
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
             var searchInput = document.getElementById('quickSearchInput');
             if (searchInput) searchInput.focus();
         }
-        // Escape : fermer les modals ouvertes
         if (e.key === 'Escape') {
             var openModals = document.querySelectorAll('.modal.show');
             openModals.forEach(function(modal) {
@@ -333,7 +388,42 @@ function initKeyboardShortcuts() {
 }
 
 /**
- * Afficher l'indicateur de force du mot de passe
+ * Count-up animation for stat card values
+ */
+function initCountUp() {
+    var values = document.querySelectorAll('.stat-card-value');
+    if (!values.length) return;
+
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                var el = entry.target;
+                var target = parseInt(el.textContent, 10);
+                if (isNaN(target) || target === 0) return;
+                observer.unobserve(el);
+
+                var start = 0;
+                var duration = 600;
+                var startTime = null;
+
+                function animate(ts) {
+                    if (!startTime) startTime = ts;
+                    var progress = Math.min((ts - startTime) / duration, 1);
+                    // ease-out
+                    var ease = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(start + (target - start) * ease);
+                    if (progress < 1) requestAnimationFrame(animate);
+                }
+                requestAnimationFrame(animate);
+            }
+        });
+    }, { threshold: 0.3 });
+
+    values.forEach(function(el) { observer.observe(el); });
+}
+
+/**
+ * Password strength indicator
  */
 function showPasswordStrength(inputId, indicatorId) {
     var input = document.getElementById(inputId);

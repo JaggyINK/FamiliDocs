@@ -23,15 +23,18 @@
 FamiliDocs est une application web Flask de gestion documentaire familiale.
 Elle permet a des familles de stocker, organiser, partager et proteger leurs documents administratifs.
 
-**Technologies** : Flask 3.0, SQLAlchemy 2.0, **PostgreSQL 16** (principal), Bootstrap 5, Fernet (AES), bcrypt
+**Technologies** : Flask 3.0, SQLAlchemy 2.0, **PostgreSQL 16** (principal), Bootstrap 5, Fernet (AES), bcrypt, pyotp (2FA)
 
 **Chiffres cles** :
 - 13 modeles de donnees
 - 8 services metier
 - 10 blueprints (modules de routes)
-- 88 endpoints (routes API/pages)
-- 44 templates HTML
-- 302 tests automatises (100% passent)
+- 96 endpoints (routes API/pages)
+- 50 templates HTML (dont 2FA setup/verify)
+- 307 tests automatises (100% passent)
+- Authentification 2FA (TOTP), Content-Security-Policy, HSTS
+- Application desktop native (CustomTkinter) partageant la meme BDD PostgreSQL
+- Desktop : documents/dossiers, partages avec droits/duree/revocation, taches avec assignation, chat familial, dashboard stats/recommandations
 
 ---
 
@@ -79,12 +82,12 @@ FamiliDocs/
 |   |   |-- search_service.py     # Recherche multicritere + stats
 |   |   |-- scheduler_service.py  # Planificateur de taches de fond
 |   |   |-- encryption_service.py # Chiffrement AES (Fernet)
-|   |-- templates/                # 44 templates Jinja2
+|   |-- templates/                # 50 templates Jinja2
 |   |-- static/
 |       |-- css/style.css         # Styles + responsive + print + dark mode
 |       |-- js/app.js             # JS: tooltips, upload, bulk, session, raccourcis
 |       |-- img/favicon.svg       # Favicon SVG
-|-- tests/                        # 15 fichiers de tests (302 tests)
+|-- tests/                        # 14 fichiers de tests (307 tests)
 |-- docs/                         # Documentation
 |-- desktop_app.py                # Lanceur desktop (CustomTkinter + Flask)
 |-- desktop_launcher.py           # Lanceur desktop alternatif (navigateur)
@@ -121,7 +124,7 @@ Gere 3 environnements :
 | Environnement | BDD | Usage |
 |---|---|---|
 | **development** | **PostgreSQL** `postgresql://jagadmin:pass@localhost:5432/familidocs` | Dev local (web + exe) |
-| **testing** | SQLite `:memory:` (en memoire, ephemere) | Tests pytest uniquement |
+| **testing** | SQLite `:memory:` (detail interne pytest, jamais utilisee a la main) | Tests pytest uniquement |
 | **production** | Variable `DATABASE_URL` (PostgreSQL obligatoire) | Production |
 
 Options PostgreSQL configurees automatiquement :
@@ -139,16 +142,9 @@ La version web et le desktop **.exe** partagent la **meme base PostgreSQL** :
 3. La condition `is_shared_mode = db_url.startswith('postgresql')` detecte PostgreSQL
 4. En mode PostgreSQL : les deux versions accedent a la meme BDD, les memes uploads, les memes backups
 
-**Fallback SQLite** (uniquement si .exe compile SANS PostgreSQL disponible) :
-- Si `DATABASE_URL` n'est PAS defini ET qu'on est en mode `.exe` (`getattr(sys, 'frozen', False)`)
-- Alors : SQLite dans `~/.familidocs/familidocs.db`
-- Ce cas ne se produit PAS en dev normal
+### Sauvegarde
 
-### Sauvegarde selon le type de BDD
-
-Le `BackupService` detecte automatiquement le type de BDD :
-- **PostgreSQL** : export JSON via SQLAlchemy (toutes les tables serialisees en JSON)
-- **SQLite** (fallback .exe) : copie directe du fichier `.db`
+Le `BackupService` exporte la BDD PostgreSQL en JSON via SQLAlchemy (toutes les tables serialisees), accompagne des fichiers uploades dans une archive ZIP.
 
 ### Cle secrete
 
@@ -189,7 +185,7 @@ Import central de tous les modeles. Initialise `db = SQLAlchemy()`. Tout import 
 ### `family.py` - Modeles Family, FamilyMember, ShareLink
 - **Family** : name, description, creator_id + relation vers membres
 - **FamilyMember** : family_id, user_id, role, invited_by, joined_at
-  - Roles : chef_famille, admin, parent, gestionnaire, membre, enfant, lecteur
+  - Roles : responsable, admin, parent, gestionnaire, membre, enfant, lecteur
 - **ShareLink** : token, document_id, family_id, created_by, expires_at, max_uses, use_count, is_revoked, granted_role
   - `is_valid` : verifie expiration + revocation + limite d'utilisation
   - `create_share_link()` : methode statique pour creer un lien securise
@@ -248,7 +244,7 @@ Import central de tous les modeles. Initialise `db = SQLAlchemy()`. Tout import 
 - **restore_backup()** : restauration depuis ZIP
 - **export_user_data()** : export RGPD (JSON avec donnees personnelles, dossiers, documents, taches)
 - **list_backups()** / **delete_backup()** / **cleanup_old_backups()** : gestion des archives
-- Support PostgreSQL (export JSON) et SQLite (copie fichier)
+- Export PostgreSQL en JSON via SQLAlchemy
 
 ### `notification_service.py` - Service notifications
 - **notify_task_due()** : tache a echeance
@@ -285,11 +281,9 @@ Import central de tous les modeles. Initialise `db = SQLAlchemy()`. Tout import 
 
 ### `encryption_service.py` - Service chiffrement
 - **generate_key()** : genere une cle Fernet (AES 128-bit)
-- **encrypt_data()** / **decrypt_data()** : chiffrement/dechiffrement en memoire
-- **encrypt_string()** / **decrypt_string()** : chiffrement de chaines
+- **get_encryption_key()** : recup la cle (env var ou fichier `.encryption_key`)
 - **encrypt_file()** / **decrypt_file()** : chiffrement/dechiffrement de fichiers sur disque
 - **decrypt_to_memory()** : dechiffrement d'un fichier directement en memoire
-- **derive_key_from_password()** : derivation de cle depuis mot de passe (PBKDF2)
 
 ---
 
@@ -531,16 +525,16 @@ Toutes les routes sont protegees par `@admin_required`.
 - **app** : Application Flask en mode testing (BDD en memoire)
 - **client** : Client HTTP de test
 - **test_user** : Utilisateur standard (test@familidocs.local / Test123!)
-- **admin_user** : Administrateur (admin_test@familidocs.local / Admin123!)
+- **admin_user** : Administrateur (admin_test@familidocs.local / Demo2024!)
 - **second_user** : Deuxieme utilisateur pour tests de partage
 - **test_folder** : Dossier de test
 - **test_document** : Document de test
 - **test_task** : Tache de test
-- **test_family** : Famille de test avec le createur comme chef_famille
+- **test_family** : Famille de test avec le createur comme responsable
 - **auth_client** : Client authentifie (utilisateur standard)
 - **admin_client** : Client authentifie (admin)
 
-### Fichiers de tests (15 fichiers, 302 tests)
+### Fichiers de tests (14 fichiers, 307 tests)
 
 | Fichier | Tests | Description |
 |---|---|---|
@@ -716,7 +710,7 @@ venv/Scripts/python.exe -m pytest tests/ -v
 ```bash
 venv/Scripts/python.exe app/main.py
 # Ouvrir http://localhost:5000
-# Login admin : admin@familidocs.local / Admin123!
+# Login admin : jean.dupont@email.com / Demo2024!
 ```
 
 ### 3. Verifier le partage BDD web/exe

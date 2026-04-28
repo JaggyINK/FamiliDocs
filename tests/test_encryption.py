@@ -17,32 +17,6 @@ class TestEncryptionService:
         assert key is not None
         assert len(key) > 0
 
-    def test_encrypt_decrypt_data(self, app):
-        """Test chiffrement/dechiffrement en memoire"""
-        from app.services.encryption_service import EncryptionService
-        key = Fernet.generate_key()
-        original = b'Donnees sensibles de test'
-
-        success, encrypted = EncryptionService.encrypt_data(original, key)
-        assert success
-        assert encrypted != original
-
-        success, decrypted = EncryptionService.decrypt_data(encrypted, key)
-        assert success
-        assert decrypted == original
-
-    def test_encrypt_decrypt_string(self, app):
-        """Test chiffrement/dechiffrement de chaine"""
-        from app.services.encryption_service import EncryptionService
-        key = Fernet.generate_key()
-        original = 'Texte secret a chiffrer'
-
-        encrypted = EncryptionService.encrypt_string(original, key)
-        assert encrypted != original
-
-        decrypted = EncryptionService.decrypt_string(encrypted, key)
-        assert decrypted == original
-
     def test_encrypt_decrypt_file(self, app):
         """Test chiffrement/dechiffrement de fichier"""
         from app.services.encryption_service import EncryptionService
@@ -70,7 +44,7 @@ class TestEncryptionService:
                 content = f.read()
             assert content == b'Contenu du fichier de test'
         finally:
-            for p in [temp_path, temp_path + '.enc', temp_path]:
+            for p in [temp_path, temp_path + '.enc']:
                 if os.path.exists(p):
                     os.remove(p)
 
@@ -93,23 +67,24 @@ class TestEncryptionService:
             os.remove(enc_path)
 
     def test_wrong_key_fails(self, app):
-        """Test qu'une mauvaise cle echoue"""
+        """Test qu'une mauvaise cle echoue au dechiffrement"""
         from app.services.encryption_service import EncryptionService
         key1 = Fernet.generate_key()
         key2 = Fernet.generate_key()
 
-        success, encrypted = EncryptionService.encrypt_data(b'secret', key1)
-        assert success
+        # chiffre avec key1
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as f:
+            f.write(b'secret')
+            temp_path = f.name
 
-        success, result = EncryptionService.decrypt_data(encrypted, key2)
-        assert not success
+        try:
+            success, enc_path = EncryptionService.encrypt_file(temp_path, key1)
+            assert success
 
-    def test_derive_key_from_password(self, app):
-        """Test derivation de cle depuis mot de passe"""
-        from app.services.encryption_service import EncryptionService
-        key1, salt = EncryptionService.derive_key_from_password('MonMotDePasse')
-        key2, _ = EncryptionService.derive_key_from_password('MonMotDePasse', salt)
-        assert key1 == key2
-
-        key3, _ = EncryptionService.derive_key_from_password('AutreMotDePasse', salt)
-        assert key1 != key3
+            # tentative dechiffrement avec key2
+            success, _ = EncryptionService.decrypt_to_memory(enc_path, key2)
+            assert not success
+        finally:
+            for p in [temp_path, temp_path + '.enc']:
+                if os.path.exists(p):
+                    os.remove(p)

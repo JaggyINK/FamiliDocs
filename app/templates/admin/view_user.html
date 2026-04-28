@@ -1,113 +1,85 @@
 {% extends "base.html" %}
 
-{% block title %}Utilisateur {{ user.full_name }} - Admin - FamiliDocs{% endblock %}
+{% block title %}{{ user.full_name }} - Admin{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('admin.users') }}">Utilisateurs</a></li>
         <li class="breadcrumb-item active">{{ user.full_name }}</li>
     </ol>
 </nav>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-person me-2"></i>{{ user.full_name }}</span>
-                <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
-                    {{ 'Actif' if user.is_active else 'Desactive' }}
-                </span>
-            </div>
-            <div class="card-body">
-                <table class="table">
-                    <tr><th style="width:150px;">Email</th><td>{{ user.email }}</td></tr>
-                    <tr><th>Pseudo</th><td>{{ user.username }}</td></tr>
-                    <tr><th>Role</th><td><span class="badge bg-primary">{{ user.role }}</span></td></tr>
-                    <tr><th>Inscription</th><td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</td></tr>
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>{{ user.full_name }}</span>
+        <div>
+            <span class="badge bg-{{ 'success' if user.is_active else 'danger' }} me-1">{{ 'Actif' if user.is_active else 'Inactif' }}</span>
+            <span class="badge bg-{{ 'danger' if user.role == 'admin' else 'secondary' }}">{{ user.role }}</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-sm mb-0">
+                    <tr><th>Email</th><td>{{ user.email }}</td></tr>
+                    <tr><th>Identifiant</th><td>@{{ user.username }}</td></tr>
+                    <tr><th>Inscription</th><td>{{ user.created_at.strftime('%d/%m/%Y') }}</td></tr>
                     <tr><th>Derniere connexion</th><td>{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'Jamais' }}</td></tr>
                 </table>
-
-                <div class="row text-center mt-3">
+            </div>
+            <div class="col-md-6">
+                <div class="row text-center">
                     <div class="col-4">
-                        <h4 class="text-primary mb-0">{{ stats.documents }}</h4>
-                        <small class="text-muted">Documents</small>
+                        <h4 class="mb-0" style="color: var(--color-accent);">{{ stats.documents }}</h4>
+                        <small class="text-muted">Docs</small>
                     </div>
                     <div class="col-4">
-                        <h4 class="text-success mb-0">{{ stats.folders }}</h4>
+                        <h4 class="mb-0" style="color: var(--color-success);">{{ stats.folders }}</h4>
                         <small class="text-muted">Dossiers</small>
                     </div>
                     <div class="col-4">
-                        <h4 class="text-info mb-0">{{ stats.tasks }}</h4>
+                        <h4 class="mb-0" style="color: var(--color-info);">{{ stats.tasks }}</h4>
                         <small class="text-muted">Taches</small>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Derniers logs -->
-        <div class="card">
-            <div class="card-header"><i class="bi bi-clock-history me-2"></i>Activite recente</div>
-            <div class="card-body">
-                {% if recent_logs %}
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead><tr><th>Action</th><th>Details</th><th>Date</th><th>IP</th></tr></thead>
-                        <tbody>
-                            {% for log in recent_logs %}
-                            <tr>
-                                <td><span class="badge bg-secondary">{{ log.action_label }}</span></td>
-                                <td><small>{{ log.details or '-' }}</small></td>
-                                <td><small>{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
-                                <td><small class="text-muted">{{ log.ip_address or '-' }}</small></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted text-center mb-0">Aucune activite</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <!-- Actions -->
-        <div class="card mb-4">
-            <div class="card-header"><i class="bi bi-gear me-2"></i>Actions</div>
-            <div class="card-body d-grid gap-2">
-                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-outline-primary">
-                    <i class="bi bi-pencil me-2"></i>Modifier
-                </a>
-
-                <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=user.id) }}">
-                    <button type="submit" class="btn btn-outline-{{ 'danger' if user.is_active else 'success' }} w-100"
-                            onclick="return confirm('{{ 'Desactiver' if user.is_active else 'Activer' }} cet utilisateur ?');">
-                        <i class="bi bi-{{ 'x-circle' if user.is_active else 'check-circle' }} me-2"></i>
-                        {{ 'Desactiver' if user.is_active else 'Activer' }}
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Reset mot de passe -->
-        <div class="card">
-            <div class="card-header"><i class="bi bi-key me-2"></i>Reinitialiser le mot de passe</div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('admin.reset_user_password', user_id=user.id) }}">
-                    <div class="mb-3">
-                        <input type="password" class="form-control" name="new_password"
-                               placeholder="Nouveau mot de passe" required minlength="8">
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100"
-                            onclick="return confirm('Reinitialiser le mot de passe ?');">
-                        <i class="bi bi-arrow-clockwise me-2"></i>Reinitialiser
-                    </button>
-                </form>
-            </div>
-        </div>
     </div>
 </div>
+
+<!-- Actions -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-outline-primary btn-sm">Modifier</a>
+    <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=user.id) }}" class="d-inline">
+        <button type="submit" class="btn btn-outline-{{ 'danger' if user.is_active else 'success' }} btn-sm"
+                onclick="return confirm('{{ 'Desactiver' if user.is_active else 'Activer' }} ?');">
+            {{ 'Desactiver' if user.is_active else 'Activer' }}
+        </button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.reset_user_password', user_id=user.id) }}" class="d-inline ms-auto">
+        <div class="input-group input-group-sm" style="width: 280px;">
+            <input type="password" class="form-control" name="new_password" placeholder="Nouveau mot de passe" required minlength="8">
+            <button type="submit" class="btn btn-warning" onclick="return confirm('Reinitialiser ?');">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Activite -->
+{% if recent_logs %}
+<div class="card">
+    <div class="card-header">Activite recente</div>
+    <div class="list-group list-group-flush">
+        {% for log in recent_logs %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+                <span class="badge bg-secondary">{{ log.action_label }}</span>
+                <small class="text-muted ms-1">{{ log.details or '' }}</small>
+            </span>
+            <small class="text-muted">{{ log.created_at.strftime('%d/%m %H:%M') }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 {% endblock %}

@@ -1,6 +1,4 @@
-"""
-Routes d'administration
-"""
+# routes admin
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from functools import wraps
@@ -18,7 +16,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 def admin_required(f):
-    """Décorateur pour restreindre l'accès aux administrateurs"""
+    """restrict admin only"""
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
@@ -32,7 +30,7 @@ def admin_required(f):
 @admin_bp.route('/')
 @admin_required
 def dashboard():
-    """Tableau de bord administrateur"""
+    """dashboard admin"""
     stats = {
         'total_users': User.query.count(),
         'active_users': User.query.filter_by(is_active=True).count(),
@@ -56,7 +54,7 @@ def dashboard():
 @admin_bp.route('/users')
 @admin_required
 def users():
-    """Liste des utilisateurs"""
+    """liste users"""
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
 
@@ -83,7 +81,7 @@ def users():
 @admin_bp.route('/users/create', methods=['GET', 'POST'])
 @admin_required
 def create_user():
-    """Création d'un utilisateur"""
+    """cree utilisatuer"""
     from app.config import Config
 
     if request.method == 'POST':
@@ -115,7 +113,7 @@ def create_user():
             )
             db.session.commit()
 
-            flash(f'Utilisateur "{username}" créé avec succès.', 'success')
+            flash(f'Utilisateur "{username}" cree.', 'success')
             return redirect(url_for('admin.users'))
         else:
             flash(result, 'danger')
@@ -127,7 +125,7 @@ def create_user():
 @admin_bp.route('/users/<int:user_id>')
 @admin_required
 def view_user(user_id):
-    """Affiche les détails d'un utilisateur"""
+    """details user"""
     user = User.query.get_or_404(user_id)
 
     stats = {
@@ -149,7 +147,7 @@ def view_user(user_id):
 @admin_bp.route('/users/<int:user_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_user(user_id):
-    """Modification d'un utilisateur"""
+    """edit user"""
     from app.config import Config
 
     user = User.query.get_or_404(user_id)
@@ -195,7 +193,7 @@ def edit_user(user_id):
 @admin_bp.route('/users/<int:user_id>/reset-password', methods=['POST'])
 @admin_required
 def reset_user_password(user_id):
-    """Réinitialise le mot de passe d'un utilisateur"""
+    """reset mdp user"""
     user = User.query.get_or_404(user_id)
     new_password = request.form.get('new_password', '')
 
@@ -222,10 +220,10 @@ def reset_user_password(user_id):
 @admin_bp.route('/users/<int:user_id>/toggle-active', methods=['POST'])
 @admin_required
 def toggle_user_active(user_id):
-    """Active/Désactive un utilisateur"""
+    """toggle actif user"""
     user = User.query.get_or_404(user_id)
 
-    # Empêcher la désactivation de son propre compte
+    # fix: empecher desactiver son propre compte
     if user.id == current_user.id:
         flash('Vous ne pouvez pas désactiver votre propre compte.', 'warning')
         return redirect(url_for('admin.view_user', user_id=user_id))
@@ -248,7 +246,7 @@ def toggle_user_active(user_id):
 @admin_bp.route('/logs')
 @admin_required
 def logs():
-    """Historique global des actions"""
+    """historique global"""
     page = request.args.get('page', 1, type=int)
     action = request.args.get('action', '')
     user_id = request.args.get('user_id', type=int)
@@ -264,7 +262,7 @@ def logs():
         page=page, per_page=50, error_out=False
     )
 
-    # Liste des actions pour le filtre
+    # actions pr filtre
     actions = list(Log.ACTION_TYPES.keys())
     users = User.query.order_by(User.username).all()
 
@@ -282,7 +280,7 @@ def logs():
 @admin_bp.route('/backups')
 @admin_required
 def backups():
-    """Gestion des sauvegardes"""
+    """gestion backups"""
     backup_list = BackupService.list_backups()
     return render_template('admin/backups.html', backups=backup_list)
 
@@ -290,7 +288,7 @@ def backups():
 @admin_bp.route('/backups/create', methods=['POST'])
 @admin_required
 def create_backup():
-    """Crée une nouvelle sauvegarde"""
+    """cree backup"""
     include_files = request.form.get('include_files') == 'on'
 
     success, result = BackupService.create_backup(
@@ -299,7 +297,7 @@ def create_backup():
     )
 
     if success:
-        flash('Sauvegarde créée avec succès.', 'success')
+        flash('Sauvegarde creee.', 'success')
     else:
         flash(result, 'danger')
 
@@ -309,7 +307,7 @@ def create_backup():
 @admin_bp.route('/backups/restore', methods=['POST'])
 @admin_required
 def restore_backup():
-    """Restaure une sauvegarde"""
+    """restaure backup"""
     backup_path = request.form.get('backup_path', '')
 
     if not backup_path:
@@ -332,7 +330,7 @@ def restore_backup():
 @admin_bp.route('/backups/delete', methods=['POST'])
 @admin_required
 def delete_backup():
-    """Supprime une sauvegarde"""
+    """suppr backup"""
     backup_path = request.form.get('backup_path', '')
 
     success, message = BackupService.delete_backup(backup_path)

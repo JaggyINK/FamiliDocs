@@ -1,10 +1,8 @@
-"""
-Routes utilisateur - Dashboard et profil
-"""
+# routes user dashboard profil
 import os
 import uuid
 from datetime import datetime, date, timedelta
-from flask import Blueprint, render_template, redirect, url_for, flash, request, send_from_directory, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_from_directory, current_app, abort
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -23,19 +21,17 @@ from app.services.notification_service import NotificationService
 
 user_bp = Blueprint('user', __name__)
 
-# Extensions autorisees pour les avatars
 ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_avatar_file(filename):
-    """Verifie si l'extension du fichier est autorisee"""
+    """check extension avatar"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
 
 
 @user_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """Page d'accueil utilisateur"""
-    # Statistiques
+    """dashboard user"""
     stats = {
         'total_documents': Document.query.filter_by(owner_id=current_user.id).count(),
         'total_folders': Folder.query.filter_by(owner_id=current_user.id).count(),
@@ -46,30 +42,27 @@ def dashboard():
         'shared_documents': len(DocumentService.get_shared_documents(current_user.id))
     }
 
-    # Documents récents
+    # docs recents
     recent_documents = Document.query.filter_by(owner_id=current_user.id)\
         .order_by(Document.updated_at.desc())\
         .limit(5)\
         .all()
 
-    # Tâches à venir
     upcoming_tasks = Task.get_upcoming_tasks(current_user.id, days=14)[:5]
-
-    # Tâches en retard
     overdue_tasks = Task.get_overdue_tasks(current_user.id)
-
-    # Documents qui expirent bientôt
     expiring_documents = DocumentService.get_expiring_documents(current_user.id, days=30)
-
-    # Statistiques detaillees
     detailed_stats = SearchService.get_statistics(current_user.id)
 
-    # T28 - Widget familles
+    # widget familles : eager loading creator pour eviter une requete N+1 sur creator
+    # (members reste en lazy='dynamic' pour supporter .count() et le filtrage)
+    from sqlalchemy.orm import joinedload
     user_families = db.session.query(Family).join(FamilyMember).filter(
         FamilyMember.user_id == current_user.id
+    ).options(
+        joinedload(Family.creator)
     ).all()
 
-    # T29 - Widget notifications
+    # widget notifs
     notification_summary = NotificationService.get_notification_summary(current_user.id)
 
     return render_template(
@@ -88,7 +81,7 @@ def dashboard():
 @user_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    """Page de profil utilisateur"""
+    """profil user"""
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
@@ -99,20 +92,20 @@ def profile():
             flash('Veuillez remplir tous les champs obligatoires.', 'warning')
             return render_template('profile.html', family_titles=User.FAMILY_TITLES)
 
-        # Vérifier si l'email est déjà utilisé par un autre utilisateur
+        # verif email deja pris
         existing_user = User.query.filter_by(email=email).first()
         if existing_user and existing_user.id != current_user.id:
             flash('Cet email est déjà utilisé.', 'danger')
             return render_template('profile.html', family_titles=User.FAMILY_TITLES)
 
-        # Mise à jour du profil
+        # maj profil
         current_user.first_name = first_name
         current_user.last_name = last_name
         current_user.email = email
         current_user.family_title = family_title if family_title else None
         db.session.commit()
 
-        flash('Profil mis à jour avec succès.', 'success')
+        flash('Profil mis a jour.', 'success')
 
     return render_template('profile.html', family_titles=User.FAMILY_TITLES)
 
@@ -120,7 +113,7 @@ def profile():
 @user_bp.route('/profile/export-data')
 @login_required
 def export_data():
-    """T7 - Export RGPD des donnees utilisateur"""
+    """export RGPD data user"""
     from flask import Response
     import json
 
@@ -141,7 +134,7 @@ def export_data():
 @user_bp.route('/profile/avatar', methods=['POST'])
 @login_required
 def upload_avatar():
-    """Upload de la photo de profil"""
+    """upload avatar"""
     if 'avatar' not in request.files:
         flash('Aucun fichier selectionne.', 'warning')
         return redirect(url_for('user.profile'))
@@ -155,7 +148,7 @@ def upload_avatar():
         flash('Type de fichier non autorise. Utilisez JPG, PNG ou GIF.', 'danger')
         return redirect(url_for('user.profile'))
 
-    # Verifier la taille (max 2 Mo)
+    # max 2 Mo
     file.seek(0, 2)
     file_size = file.tell()
     file.seek(0)
@@ -163,25 +156,25 @@ def upload_avatar():
         flash('Le fichier est trop volumineux (max 2 Mo).', 'danger')
         return redirect(url_for('user.profile'))
 
-    # Generer un nom unique
+    # nom unique
     ext = file.filename.rsplit('.', 1)[1].lower()
     filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
 
-    # Creer le dossier avatars si necessaire
+    # dossier avatars
     avatar_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'avatars')
     if not os.path.exists(avatar_folder):
         os.makedirs(avatar_folder)
 
-    # Supprimer l'ancien avatar si existe
+    # suppr ancien avatar
     if current_user.profile_photo:
         old_path = os.path.join(avatar_folder, current_user.profile_photo)
         if os.path.exists(old_path):
             os.remove(old_path)
 
-    # Sauvegarder le nouveau fichier
+    # save nouveau fichier
     file.save(os.path.join(avatar_folder, filename))
 
-    # Mettre a jour la base de donnees
+    # maj bdd
     current_user.profile_photo = filename
     db.session.commit()
 
@@ -192,7 +185,7 @@ def upload_avatar():
 @user_bp.route('/profile/avatar/delete', methods=['POST'])
 @login_required
 def delete_avatar():
-    """Supprime la photo de profil"""
+    """suppr avatar"""
     if current_user.profile_photo:
         avatar_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'avatars')
         old_path = os.path.join(avatar_folder, current_user.profile_photo)
@@ -208,8 +201,12 @@ def delete_avatar():
 
 
 @user_bp.route('/avatars/<filename>')
+@login_required
 def avatar(filename):
-    """Sert les fichiers avatar"""
+    """sert fichiers avatar"""
+    # fix: path traversal
+    if not filename.startswith('avatar_') or '..' in filename:
+        abort(404)
     avatar_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'avatars')
     return send_from_directory(avatar_folder, filename)
 
@@ -217,7 +214,7 @@ def avatar(filename):
 @user_bp.route('/folders')
 @login_required
 def folders():
-    """Liste des dossiers de l'utilisateur"""
+    """liste dossiers"""
     page = request.args.get('page', 1, type=int)
     pagination = Folder.query.filter_by(
         owner_id=current_user.id,
@@ -230,7 +227,7 @@ def folders():
 @user_bp.route('/folders/create', methods=['GET', 'POST'])
 @login_required
 def create_folder():
-    """Création d'un nouveau dossier"""
+    """cree dossier"""
     from app.config import Config
 
     if request.method == 'POST':
@@ -254,7 +251,6 @@ def create_folder():
         db.session.add(folder)
         db.session.commit()
 
-        # Log
         Log.create_log(
             user_id=current_user.id,
             action='folder_create',
@@ -262,7 +258,7 @@ def create_folder():
         )
         db.session.commit()
 
-        flash(f'Dossier "{name}" créé avec succès.', 'success')
+        flash(f'Dossier "{name}" cree.', 'success')
         return redirect(url_for('user.folders'))
 
     categories = Config.DEFAULT_CATEGORIES
@@ -281,10 +277,9 @@ def create_folder():
 @user_bp.route('/folders/<int:folder_id>')
 @login_required
 def view_folder(folder_id):
-    """Affiche le contenu d'un dossier"""
+    """contenu dossier"""
     folder = Folder.query.get_or_404(folder_id)
 
-    # Vérification des droits
     if folder.owner_id != current_user.id and not current_user.is_admin():
         flash('Vous n\'avez pas accès à ce dossier.', 'danger')
         return redirect(url_for('user.folders'))
@@ -303,7 +298,7 @@ def view_folder(folder_id):
 @user_bp.route('/folders/<int:folder_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_folder(folder_id):
-    """Modification d'un dossier"""
+    """edit dossier"""
     from app.config import Config
 
     folder = Folder.query.get_or_404(folder_id)
@@ -326,7 +321,7 @@ def edit_folder(folder_id):
         )
         db.session.commit()
 
-        flash('Dossier mis à jour avec succès.', 'success')
+        flash('Dossier mis a jour.', 'success')
         return redirect(url_for('user.view_folder', folder_id=folder_id))
 
     categories = Config.DEFAULT_CATEGORIES
@@ -336,14 +331,14 @@ def edit_folder(folder_id):
 @user_bp.route('/folders/<int:folder_id>/delete', methods=['POST'])
 @login_required
 def delete_folder(folder_id):
-    """Suppression d'un dossier"""
+    """suppr dossier"""
     folder = Folder.query.get_or_404(folder_id)
 
     if folder.owner_id != current_user.id and not current_user.is_admin():
         flash('Vous n\'avez pas le droit de supprimer ce dossier.', 'danger')
         return redirect(url_for('user.folders'))
 
-    # Vérifier s'il y a des documents ou sous-dossiers
+    # check docs ou sous-dossiers
     if folder.documents.count() > 0:
         flash('Impossible de supprimer un dossier contenant des documents.', 'warning')
         return redirect(url_for('user.view_folder', folder_id=folder_id))
@@ -370,7 +365,7 @@ def delete_folder(folder_id):
 @user_bp.route('/activity')
 @login_required
 def activity():
-    """Historique d'activité de l'utilisateur"""
+    """historique activite"""
     page = request.args.get('page', 1, type=int)
     per_page = 20
 
@@ -384,7 +379,7 @@ def activity():
 @user_bp.route('/activity/detailed')
 @login_required
 def activity_detailed():
-    """N6 - Page d'activité détaillée avec filtres et stats sur 6 mois"""
+    """activite detaillee filtres + stats 6 mois"""
     from datetime import timedelta
     from app.models.family import FamilyMember
 
@@ -394,7 +389,7 @@ def activity_detailed():
     filter_period = request.args.get('period', '6m')  # 1w, 1m, 3m, 6m
     view_user_id = request.args.get('user_id', type=int)
 
-    # Calcul de la période
+    # calcul periode
     period_days = {
         '1w': 7,
         '1m': 30,
@@ -404,51 +399,64 @@ def activity_detailed():
     days = period_days.get(filter_period, 180)
     start_date = datetime.utcnow() - timedelta(days=days)
 
-    # Déterminer quel utilisateur afficher
+    # quel user afficher
     target_user_id = current_user.id
     target_user = current_user
     can_view_family = False
     family_members_to_view = []
 
-    # Si admin ou chef de famille, peut voir les membres de sa famille
+    # admin/responsable peut voir membres famille
+    seen_user_ids = set()
     if current_user.is_admin():
         can_view_family = True
-        # Récupérer tous les membres des familles créées par l'admin
+        # admin voit tous les membres de toutes ses familles (creees + membre)
         from app.models.family import Family
-        families = Family.query.filter_by(creator_id=current_user.id).all()
-        for family in families:
+        admin_memberships = FamilyMember.query.filter_by(user_id=current_user.id).all()
+        family_ids = {m.family_id for m in admin_memberships}
+        # ajouter aussi les familles creees par l'admin
+        created_families = Family.query.filter_by(creator_id=current_user.id).all()
+        for f in created_families:
+            family_ids.add(f.id)
+        for fid in family_ids:
+            family = Family.query.get(fid)
+            if family is None:
+                continue
             for member in family.members:
-                if member.user_id != current_user.id:
+                if member.user_id != current_user.id and member.user is not None and member.user_id not in seen_user_ids:
+                    seen_user_ids.add(member.user_id)
                     family_members_to_view.append({
                         'user': member.user,
                         'family': family.name,
                         'role': member.role
                     })
     else:
-        # Vérifier si chef de famille
+        # check si responsable
         memberships = FamilyMember.query.filter_by(user_id=current_user.id).all()
         for membership in memberships:
-            if membership.role in ('chef_famille', 'admin'):
+            if membership.role in ('responsable', 'admin'):
                 can_view_family = True
                 for member in membership.family.members:
-                    if member.user_id != current_user.id:
+                    if member.user_id != current_user.id and member.user is not None and member.user_id not in seen_user_ids:
+                        seen_user_ids.add(member.user_id)
                         family_members_to_view.append({
                             'user': member.user,
                             'family': membership.family.name,
                             'role': member.role
                         })
 
-    # Si demande de voir un autre utilisateur
+    # demande voir autre user
     if view_user_id and can_view_family:
-        # Vérifier que l'utilisateur demandé est dans la liste
+        # verif user dans la liste
         allowed_ids = []
         for m in family_members_to_view:
             allowed_ids.append(m['user'].id)
         if view_user_id in allowed_ids:
             target_user = User.query.get(view_user_id)
+            if target_user is None:
+                abort(404)
             target_user_id = view_user_id
 
-    # Query des logs
+    # query logs
     query = Log.query.filter(
         Log.user_id == target_user_id,
         Log.created_at >= start_date
@@ -460,7 +468,7 @@ def activity_detailed():
     logs = query.order_by(Log.created_at.desc())\
         .paginate(page=page, per_page=per_page, error_out=False)
 
-    # Statistiques sur la période
+    # stats periode
     stats = {
         'total_actions': Log.query.filter(
             Log.user_id == target_user_id,
@@ -488,7 +496,7 @@ def activity_detailed():
         ).count()
     }
 
-    # Types d'actions pour le filtre
+    # types actions filtre
     action_types = [
         ('', 'Toutes'),
         ('login', 'Connexions'),
@@ -514,7 +522,7 @@ def activity_detailed():
 @user_bp.route('/folders/<int:folder_id>/share', methods=['GET', 'POST'])
 @login_required
 def share_folder(folder_id):
-    """Partage tous les documents d'un dossier"""
+    """partage docs dossier"""
     from datetime import date, timedelta
     from app.services.permission_service import PermissionService
 
@@ -539,7 +547,7 @@ def share_folder(folder_id):
         if end_date_str:
             try:
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                # Limite 90 jours
+                # limite 90j
                 max_allowed = date.today() + timedelta(days=90)
                 if end_date > max_allowed:
                     end_date = max_allowed
@@ -563,11 +571,11 @@ def share_folder(folder_id):
 
         return redirect(url_for('user.view_folder', folder_id=folder_id))
 
-    # Utilisateurs disponibles
+    # users dispo
     family_members = PermissionService.get_family_members_for_sharing(current_user.id)
     available_users = PermissionService.get_accessible_users_for_sharing(current_user.id)
 
-    # Stats du dossier
+    # stats dossier
     doc_count = folder.documents.count()
 
     today = date.today().isoformat()
