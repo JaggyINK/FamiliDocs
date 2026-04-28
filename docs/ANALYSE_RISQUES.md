@@ -77,62 +77,90 @@ pour un déploiement multi-familles ou public.
 
 ---
 
-## 5. Matrice probabilité × impact
+## 5. Classification DICT et matrice probabilité × impact
+
+### 5.1 Rappel : les critères DICT (référentiel ANSSI / CNIL)
+
+Quatre critères standards pour évaluer la sécurité d'un système d'information :
+
+| Critère | Définition |
+|---|---|
+| **D** — Disponibilité | Le système et les données sont accessibles quand on en a besoin |
+| **I** — Intégrité | Les données ne sont ni altérées ni détruites de manière non autorisée |
+| **C** — Confidentialité | Seules les personnes autorisées peuvent accéder aux données |
+| **T** — Traçabilité | Toutes les actions sont enregistrées et imputables à un acteur |
+
+> Variante : **DICP** (la lettre **P** de Preuve remplace le **T** de Traçabilité).
+
+### 5.2 Évaluation des besoins DICT des actifs primaires
+
+Échelle : **1** (faible) → **4** (critique).
+
+| Actif | D | I | C | T | Commentaire |
+|---|---|---|---|---|---|
+| Documents privés | 3 | 4 | 4 | 3 | Données personnelles voire sensibles, altération inacceptable |
+| Mots de passe | 2 | 4 | 4 | 3 | Reset possible (D faible), mais compromis = catastrophe |
+| Comptes admin | 3 | 4 | 4 | 4 | Toutes les actions admin doivent être tracées (audit) |
+| Sauvegardes ZIP | 4 | 4 | 3 | 3 | Critique en cas de désastre, intégrité essentielle |
+| Clé de chiffrement | 3 | 4 | 4 | 2 | Volée = tous les `.enc` déchiffrables |
+
+### 5.3 Mapping menaces → critères DICT touchés
+
+Chaque menace impacte un ou plusieurs critères DICT.
+
+| # | Menace | D | I | C | T |
+|---|---|---|---|---|---|
+| M1 | Vol identifiants | | × | × | |
+| M2 | Injection SQL | × | × | × | |
+| M3 | XSS | | × | × | |
+| M4 | CSRF | | × | | |
+| M5 | Vol session | | × | × | |
+| M6 | Path traversal | | | × | |
+| M7 | Vol physique disque | | | × | |
+| M8 | Ransomware | × | × | × | |
+| M9 | Erreur admin | × | × | | |
+| M10 | Fuite via export RGPD | | | × | |
+| M11 | DoS | × | | | |
+| M12 | Token de partage deviné | | × | × | |
+| M13 | Clé de chiffrement volée | | | × | |
+| M14 | Modification des logs | | | | × |
+
+### 5.4 Matrice probabilité × impact
 
 Échelle :
 - **Probabilité** : 1 (rare) → 5 (fréquent)
 - **Impact** : 1 (mineur) → 5 (catastrophique)
 - **Niveau de risque** : Probabilité × Impact
 
-| # | Menace | Proba | Impact | Risque | Niveau |
-|---|---|---|---|---|---|
-| M1 | Vol identifiants | 4 | 4 | 16 | **Élevé** |
-| M2 | Injection SQL | 1 | 5 | 5 | Moyen |
-| M3 | XSS | 2 | 4 | 8 | Moyen |
-| M4 | CSRF | 1 | 3 | 3 | Faible |
-| M5 | Vol session | 2 | 4 | 8 | Moyen |
-| M6 | Path traversal | 1 | 4 | 4 | Faible |
-| M7 | Vol physique disque | 2 | 5 | 10 | Moyen |
-| M8 | Ransomware | 1 | 5 | 5 | Moyen |
-| M9 | Erreur admin | 3 | 3 | 9 | Moyen |
-| M10 | Fuite via export | 2 | 5 | 10 | Moyen |
-| M11 | DoS | 2 | 2 | 4 | Faible |
-| M12 | Token de partage | 2 | 3 | 6 | Faible |
-| M13 | Clé de chiffrement | 1 | 5 | 5 | Moyen |
-| M14 | Modification logs | 1 | 4 | 4 | Faible |
+| # | Menace | DICT touché | Proba | Impact | Risque | Niveau |
+|---|---|---|---|---|---|---|
+| M1 | Vol identifiants | I, C | 4 | 4 | 16 | **Élevé** |
+| M2 | Injection SQL | D, I, C | 1 | 5 | 5 | Moyen |
+| M3 | XSS | I, C | 2 | 4 | 8 | Moyen |
+| M4 | CSRF | I | 1 | 3 | 3 | Faible |
+| M5 | Vol session | I, C | 2 | 4 | 8 | Moyen |
+| M6 | Path traversal | C | 1 | 4 | 4 | Faible |
+| M7 | Vol physique disque | C | 2 | 5 | 10 | Moyen |
+| M8 | Ransomware | D, I, C | 1 | 5 | 5 | Moyen |
+| M9 | Erreur admin | D, I | 3 | 3 | 9 | Moyen |
+| M10 | Fuite via export | C | 2 | 5 | 10 | Moyen |
+| M11 | DoS | D | 2 | 2 | 4 | Faible |
+| M12 | Token de partage | I, C | 2 | 3 | 6 | Faible |
+| M13 | Clé de chiffrement | C | 1 | 5 | 5 | Moyen |
+| M14 | Modification logs | T | 1 | 4 | 4 | Faible |
 
-### Bonus : la matrice sous forme d'un dictionnaire Python
+### 5.5 Lecture des résultats
 
-Un **dictionnaire Python** (`dict`) est une structure de données **clé-valeur** : chaque
-clé (ici l'identifiant de menace `M1`, `M2`...) renvoie vers un objet structuré
-(probabilité, impact, etc.). Cette représentation a deux avantages :
-
-1. **Manipulable par script** : on peut filtrer (`[m for m in RISK_MATRIX.values() if m['risque'] > 10]`),
-   trier, ou exporter en JSON en une ligne.
-2. **Sérialisable** : un `dict` Python s'exporte directement en JSON (`json.dumps`),
-   ce qui permet de l'intégrer dans une API ou un dashboard.
-
-```python
-RISK_MATRIX = {
-    'M1':  {'menace': 'Vol identifiants',         'proba': 4, 'impact': 4, 'risque': 16, 'niveau': 'eleve'},
-    'M2':  {'menace': 'Injection SQL',            'proba': 1, 'impact': 5, 'risque':  5, 'niveau': 'moyen'},
-    'M3':  {'menace': 'XSS',                      'proba': 2, 'impact': 4, 'risque':  8, 'niveau': 'moyen'},
-    'M4':  {'menace': 'CSRF',                     'proba': 1, 'impact': 3, 'risque':  3, 'niveau': 'faible'},
-    'M5':  {'menace': 'Vol session',              'proba': 2, 'impact': 4, 'risque':  8, 'niveau': 'moyen'},
-    'M6':  {'menace': 'Path traversal',           'proba': 1, 'impact': 4, 'risque':  4, 'niveau': 'faible'},
-    'M7':  {'menace': 'Vol physique disque',      'proba': 2, 'impact': 5, 'risque': 10, 'niveau': 'moyen'},
-    'M8':  {'menace': 'Ransomware',               'proba': 1, 'impact': 5, 'risque':  5, 'niveau': 'moyen'},
-    'M9':  {'menace': 'Erreur admin',             'proba': 3, 'impact': 3, 'risque':  9, 'niveau': 'moyen'},
-    'M10': {'menace': 'Fuite via export RGPD',    'proba': 2, 'impact': 5, 'risque': 10, 'niveau': 'moyen'},
-    'M11': {'menace': 'DoS',                      'proba': 2, 'impact': 2, 'risque':  4, 'niveau': 'faible'},
-    'M12': {'menace': 'Token de partage devine',  'proba': 2, 'impact': 3, 'risque':  6, 'niveau': 'faible'},
-    'M13': {'menace': 'Cle de chiffrement volee', 'proba': 1, 'impact': 5, 'risque':  5, 'niveau': 'moyen'},
-    'M14': {'menace': 'Modification des logs',    'proba': 1, 'impact': 4, 'risque':  4, 'niveau': 'faible'},
-}
-```
-
-Cette structure est immédiatement exploitable par un script de revue automatique ou
-par un dashboard.
+- La **Confidentialité (C)** est le critère le plus exposé : 11 menaces sur 14 la touchent.
+  Les contre-mesures principales sont **bcrypt** (mots de passe), **AES Fernet**
+  (documents privés), **CSP / HttpOnly** (sessions).
+- L'**Intégrité (I)** est touchée par 9 menaces. Les contre-mesures : **CSRF token**,
+  **ORM SQLAlchemy** (anti-injection), **validation des entrées**.
+- La **Disponibilité (D)** est moins exposée (4 menaces). Mesures : **rate limiting**,
+  **limite de taille à 16 Mo**, **sauvegardes ZIP**.
+- La **Traçabilité (T)** n'est explicitement menacée que par M14 (modification des logs).
+  Mesure : journalisation de 27 types d'actions, retention 180 jours, à durcir avec un
+  log immuable type append-only en V3.
 
 ---
 
