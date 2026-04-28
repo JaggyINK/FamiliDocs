@@ -199,8 +199,6 @@ Diagramme detaille : [`docs/uml/composants.png`](docs/uml/composants.png)
 - [Politique de securite](docs/POLITIQUE_SECURITE.md)
 - [Conformite RGPD](docs/CONFORMITE_RGPD.md)
 - [Analyse de risques (EBIOS)](docs/ANALYSE_RISQUES.md)
-- [Preparation oral E5](ORAL_E5_PREPARATION.md)
-- [Revision BTS SIO](REVISION_BTS_SIO.md)
 - [Changelog v1.0 -> v2.3](CHANGELOG.md)
 
 ---
