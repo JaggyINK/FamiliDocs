@@ -187,7 +187,8 @@ Diagramme detaille : [`docs/uml/composants.png`](docs/uml/composants.png)
 - [Identifiants de demo](DEMO_IDENTIFIANTS.txt) — comptes + scenario
 
 ### Pour les developpeurs
-- [Documentation technique complete](docs/DOCUMENTATION_COMPLETE.md) — architecture detaillee
+- [Architecture](docs/ARCHITECTURE.md) — synthese de l'architecture, patrons, choix techniques
+- [Documentation technique complete](docs/DOCUMENTATION_COMPLETE.md) — detail des modeles, services et routes
 - [Schema de BDD](docs/schema_bdd.md) — MCD + analyse normalisation 3FN
 - [Plan de tests](docs/PLAN_TESTS.md) — strategie de tests
 - [Guide d'installation](docs/INSTALLATION.md) — dev + production

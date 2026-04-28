@@ -141,7 +141,24 @@ Echelle :
 
 ---
 
-## 9. Conclusion
+## 9. Methodologie
+
+L'analyse de risques a ete realisee avec l'assistance de **Claude Code (Anthropic)**,
+un outil d'analyse de code par IA, pour :
+
+- Cartographier les actifs et identifier les menaces classiques (OWASP, ANSSI)
+- Cross-checker les mesures de securite presentes dans le code avec la matrice
+- Verifier la coherence entre la politique de securite (`POLITIQUE_SECURITE.md`) et
+  les implementations reelles dans le code
+
+L'utilisation d'un assistant IA pour l'analyse de risques est une pratique en
+emergence dans l'industrie (revue de code automatisee, scan de vulnerabilites).
+Les resultats ont ete revus et valides manuellement par le developpeur. Voir
+detail dans `docs/POLITIQUE_SECURITE.md` (section 10).
+
+---
+
+## 10. Conclusion
 
 Le projet presente un **niveau de securite raisonnable pour un usage familial restreint**.
 Les risques eleves identifies (M1 : vol d'identifiants) sont **partiellement couverts**

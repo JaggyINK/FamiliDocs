@@ -163,7 +163,45 @@ Les logs sont automatiquement supprimes apres **180 jours** (configurable via
 
 ---
 
-## 10. Limitations connues
+## 10. Audit de securite
+
+Un audit complet du projet a ete realise avec l'assistance de **Claude Code (Anthropic)**,
+un outil d'analyse de code par IA. L'audit a couvert :
+
+- **Failles applicatives classiques (OWASP)** : injection SQL, XSS, CSRF, path traversal,
+  injection de chemin Zip-Slip dans la restauration des sauvegardes, IDOR (Insecure Direct
+  Object References), enumeration d'utilisateurs
+- **Authentification et sessions** : verification de la robustesse du hashage bcrypt,
+  validation du rate limiting, contrôle de l'absence de fuite via les messages d'erreur,
+  chiffrement TOTP de la 2FA
+- **Configuration** : recherche de secrets en dur dans le code, validation des en-tetes
+  HTTP de securite, verification que `.env` est bien dans `.gitignore`
+- **Code mort et imports inutilises** : reduction de la surface d'attaque
+- **Tests de securite** : verification de la couverture des cas critiques (CSRF token,
+  controle d'acces aux ressources d'autres utilisateurs, RGPD)
+
+**Resultats** : plusieurs ameliorations ont ete identifiees puis implementees, notamment :
+
+- Retrait des identifiants de base de donnees en dur dans `app/config/config.py` (fallback
+  remplace par une exception explicite si `DATABASE_URL` n'est pas definie)
+- Uniformisation du message d'erreur de connexion ("Email ou mot de passe incorrect")
+  pour empecher l'enumeration des comptes existants
+- Validation au niveau modele du champ `role` de `FamilyMember` via `@validates('role')`
+- Suppression de methodes mortes dans `EncryptionService`, `Log` et `BackupService`
+- Documentation formelle de la politique de securite (ce document) et d'une analyse de
+  risques inspiree de la methode EBIOS (`docs/ANALYSE_RISQUES.md`)
+
+Toutes les remediations ont ete validees par les **307 tests automatises** existants et 8
+nouveaux tests dedies a la securite (data minimization RGPD, retention logs, droit a
+l'oubli en cascade, validation des roles).
+
+> **Note** : l'IA a servi d'**outil d'aide a l'audit**. Toutes les decisions techniques,
+> les corrections et les choix d'architecture restent la responsabilite du developpeur,
+> qui maitrise et peut expliquer chaque ligne de code modifiee.
+
+---
+
+## 11. Limitations connues
 
 - Rate limiting en memoire (mono-instance)
 - Cle de chiffrement sur disque (en prod : Vault/KMS recommande)
