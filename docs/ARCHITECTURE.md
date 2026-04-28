@@ -224,7 +224,11 @@ La securite est presente **a chaque couche** :
 - **Donnees** : mots de passe haches bcrypt, documents prives chiffres AES sur disque
 - **Reseau** : 7 en-tetes HTTP de securite (CSP, HSTS, X-Frame-Options...)
 
-Voir details dans [`POLITIQUE_SECURITE.md`](POLITIQUE_SECURITE.md) et [`ANALYSE_RISQUES.md`](ANALYSE_RISQUES.md).
+L'analyse de la securite suit le referentiel **DICT** (ANSSI / CNIL) : Disponibilite,
+Integrite, Confidentialite, Tracabilite. Chaque mesure est classee par critere DICT
+qu'elle couvre dans [`POLITIQUE_SECURITE.md`](POLITIQUE_SECURITE.md) section 11.
+La matrice de menaces avec mapping DICT est dans [`ANALYSE_RISQUES.md`](ANALYSE_RISQUES.md)
+section 5.
 
 ---
 

@@ -8,7 +8,7 @@ au contexte d'un projet d'école familial.
 ## 1. Contexte et périmètre
 
 **Application** : FamiliDocs (web Flask + desktop CustomTkinter, BDD PostgreSQL partagée).
-**Utilisateurs** : familles (5-10 personnes par famille en moyenne).
+**Utilisateurs cibles** : familles (5 à 10 personnes par famille en moyenne).
 **Données critiques** : documents administratifs (factures, identités, santé, finances).
 **Hébergement étudié** : local (WSL2 + PostgreSQL local).
 
@@ -17,6 +17,7 @@ au contexte d'un projet d'école familial.
 ## 2. Identification des actifs
 
 ### Actifs primaires (à protéger en priorité)
+
 | Actif | Pourquoi c'est critique |
 |---|---|
 | **Documents privés** | Données personnelles voire sensibles (santé, finances) |
@@ -26,6 +27,7 @@ au contexte d'un projet d'école familial.
 | **Clé de chiffrement** | Si volée, tous les documents privés sont déchiffrables |
 
 ### Actifs supports (techniques)
+
 | Actif | Rôle |
 |---|---|
 | Serveur Flask | Héberge l'application web |
@@ -52,7 +54,7 @@ implémentée dans le code pour s'en protéger.
 | M7 | Vol physique du disque | Externe / Insider | Accès physique au serveur | **Chiffrement AES (Fernet)** automatique des documents privés. Fichier : `encryption_service.py` |
 | M8 | Ransomware | Externe | Compromission du serveur | **Sauvegardes ZIP** régulières + code source **versionné sur GitHub** (recovery possible) |
 | M9 | Erreur admin | Insider | Suppression accidentelle, mauvaise configuration | **Logs admin** tracés (27 types d'actions) + sauvegarde avant chaque restauration (`.before_restore`). Fichiers : `log.py`, `backup_service.py` |
-| M10 | Fuite via export RGPD | Insider | Compte compromis -> export complet | L'export **n'inclut pas** le hash du mot de passe ni le secret TOTP. Vérifié par le test `test_export_does_not_contain_password_hash`. Fichier : `backup_service.py:export_user_data` |
+| M10 | Fuite via export RGPD | Insider | Compte compromis → export complet | L'export **n'inclut pas** le hash du mot de passe ni le secret TOTP. Vérifié par le test `test_export_does_not_contain_password_hash`. Fichier : `backup_service.py:export_user_data` |
 | M11 | Déni de service (DoS) | Externe | Trop de requêtes, upload massif | **Limite 16 Mo / fichier** + rate limiting connexion + en prod, Nginx avec `limit_req`. Fichiers : `config.py`, `auth_service.py` |
 | M12 | Accès non autorisé via lien de partage | Externe / Insider | Token deviné ou intercepté | Token **64 caractères aléatoires** via `secrets.token_urlsafe(48)` + expiration max 90 j + nombre maximum d'utilisations + révocation. Fichier : `family.py:ShareLink` |
 | M13 | Compromission de la clé de chiffrement | Externe / Insider | Accès au fichier `.encryption_key` | `.encryption_key` **gitignoré** + permissions OS restreintes + recommandation Vault/KMS pour la production. Fichier : `encryption_service.py` |
@@ -77,7 +79,7 @@ pour un déploiement multi-familles ou public.
 
 ---
 
-## 5. Classification DICT et matrice probabilité × impact
+## 5. Classification DICT et matrice de risques
 
 ### 5.1 Rappel : les critères DICT (référentiel ANSSI / CNIL)
 
@@ -85,16 +87,16 @@ Quatre critères standards pour évaluer la sécurité d'un système d'informati
 
 | Critère | Définition |
 |---|---|
-| **D** — Disponibilité | Le système et les données sont accessibles quand on en a besoin |
-| **I** — Intégrité | Les données ne sont ni altérées ni détruites de manière non autorisée |
-| **C** — Confidentialité | Seules les personnes autorisées peuvent accéder aux données |
-| **T** — Traçabilité | Toutes les actions sont enregistrées et imputables à un acteur |
+| **D — Disponibilité** | Le système et les données sont accessibles quand on en a besoin |
+| **I — Intégrité** | Les données ne sont ni altérées ni détruites de manière non autorisée |
+| **C — Confidentialité** | Seules les personnes autorisées peuvent accéder aux données |
+| **T — Traçabilité** | Toutes les actions sont enregistrées et imputables à un acteur |
 
-> Variante : **DICP** (la lettre **P** de Preuve remplace le **T** de Traçabilité).
+> Variante : **DICP** — la lettre **P** (Preuve) remplace le **T** (Traçabilité).
 
 ### 5.2 Évaluation des besoins DICT des actifs primaires
 
-Échelle : **1** (faible) → **4** (critique).
+Pour chaque actif, on note le **niveau de sensibilité** sur les 4 axes (échelle 1 à 4).
 
 | Actif | D | I | C | T | Commentaire |
 |---|---|---|---|---|---|
@@ -127,40 +129,60 @@ Chaque menace impacte un ou plusieurs critères DICT.
 
 ### 5.4 Matrice probabilité × impact
 
-Échelle :
-- **Probabilité** : 1 (rare) → 5 (fréquent)
-- **Impact** : 1 (mineur) → 5 (catastrophique)
-- **Niveau de risque** : Probabilité × Impact
+Pour chaque menace, on évalue :
 
-| # | Menace | DICT touché | Proba | Impact | Risque | Niveau |
-|---|---|---|---|---|---|---|
-| M1 | Vol identifiants | I, C | 4 | 4 | 16 | **Élevé** |
+- **Probabilité** d'occurrence (de **1** rare à **5** fréquent)
+- **Impact** si elle se produit (de **1** mineur à **5** catastrophique)
+- **Score de risque** : `Probabilité × Impact` (échelle 1 à 25)
+
+#### Échelle de criticité
+
+Le score est interprété selon 4 niveaux qui déterminent la priorité de traitement :
+
+| Score | Niveau | Couleur ANSSI | Action attendue |
+|:---:|---|:---:|---|
+| 1 à 4 | **Faible** | vert | Acceptable, surveillance simple |
+| 5 à 9 | **Moyen** | jaune | À surveiller, à traiter dans la durée |
+| 10 à 14 | **Important** | orange | À traiter, plan d'amélioration prévu |
+| 15 à 25 | **Élevé** | rouge | Prioritaire, contre-mesures renforcées |
+
+#### Tableau des risques
+
+| # | Menace | DICT touché | Proba | Impact | Score | Niveau |
+|:---:|---|:---:|:---:|:---:|:---:|---|
+| M1 | Vol identifiants | I, C | 4 | 4 | **16** | **Élevé** |
 | M2 | Injection SQL | D, I, C | 1 | 5 | 5 | Moyen |
 | M3 | XSS | I, C | 2 | 4 | 8 | Moyen |
 | M4 | CSRF | I | 1 | 3 | 3 | Faible |
 | M5 | Vol session | I, C | 2 | 4 | 8 | Moyen |
 | M6 | Path traversal | C | 1 | 4 | 4 | Faible |
-| M7 | Vol physique disque | C | 2 | 5 | 10 | Moyen |
+| M7 | Vol physique disque | C | 2 | 5 | 10 | **Important** |
 | M8 | Ransomware | D, I, C | 1 | 5 | 5 | Moyen |
 | M9 | Erreur admin | D, I | 3 | 3 | 9 | Moyen |
-| M10 | Fuite via export | C | 2 | 5 | 10 | Moyen |
+| M10 | Fuite via export RGPD | C | 2 | 5 | 10 | **Important** |
 | M11 | DoS | D | 2 | 2 | 4 | Faible |
-| M12 | Token de partage | I, C | 2 | 3 | 6 | Faible |
+| M12 | Token de partage | I, C | 2 | 3 | 6 | Moyen |
 | M13 | Clé de chiffrement | C | 1 | 5 | 5 | Moyen |
 | M14 | Modification logs | T | 1 | 4 | 4 | Faible |
 
 ### 5.5 Lecture des résultats
 
 - La **Confidentialité (C)** est le critère le plus exposé : 11 menaces sur 14 la touchent.
-  Les contre-mesures principales sont **bcrypt** (mots de passe), **AES Fernet**
-  (documents privés), **CSP / HttpOnly** (sessions).
-- L'**Intégrité (I)** est touchée par 9 menaces. Les contre-mesures : **CSRF token**,
+  Contre-mesures principales : **bcrypt** (mots de passe), **AES Fernet** (documents privés),
+  **CSP / HttpOnly** (sessions).
+- L'**Intégrité (I)** est touchée par 9 menaces. Contre-mesures : **CSRF token**,
   **ORM SQLAlchemy** (anti-injection), **validation des entrées**.
 - La **Disponibilité (D)** est moins exposée (4 menaces). Mesures : **rate limiting**,
   **limite de taille à 16 Mo**, **sauvegardes ZIP**.
 - La **Traçabilité (T)** n'est explicitement menacée que par M14 (modification des logs).
-  Mesure : journalisation de 27 types d'actions, retention 180 jours, à durcir avec un
+  Mesure : journalisation de 27 types d'actions, rétention 180 jours, à durcir avec un
   log immuable type append-only en V3.
+
+**Une seule menace de niveau Élevé** (M1, score 16) : c'est le vol d'identifiants. Elle
+est largement mitigée par la combinaison **bcrypt + 2FA TOTP + rate limiting + anti-énumération**.
+**Deux menaces de niveau Important** (M7 vol physique disque, M10 fuite via export) sont
+mitigées respectivement par le **chiffrement AES** et la **non-inclusion des secrets** dans
+les exports RGPD.
 
 ---
 
@@ -171,7 +193,7 @@ Certains risques ne sont pas remédiés au stade actuel : voici les justificatio
 | Risque résiduel | Justification |
 |---|---|
 | **Rate limiting non distribué** | Le projet vise un **usage familial** (5 à 10 utilisateurs maximum). Une seule instance Flask suffit, donc partager le compteur entre instances n'a pas de sens ici. Si le projet évoluait vers du multi-tenant, on migrerait sur Redis. |
-| **Clé de chiffrement sur disque** | C'est un **compromis pédagogique** assumé pour le projet d'école : utiliser un Vault ou un KMS demanderait une infrastructure cloud. La clé est dans `.encryption_key`, **gitignorée**, avec des permissions OS restreintes. C'est documenté clairement dans le code. |
+| **Clé de chiffrement sur disque** | C'est un **compromis pédagogique** assumé pour le projet d'école : utiliser un Vault ou un KMS demanderait une infrastructure cloud. La clé est dans `.encryption_key`, **gitignorée**, avec des permissions OS restreintes. |
 | **CSP avec `unsafe-inline`** | Nécessaire pour Bootstrap qui injecte du `style=""` inline. Plutôt que de dégrader le visuel, je l'**accepte** et je me réserve l'amélioration pour la V3 (extraction des inline). |
 | **Pas de tests E2E avec navigateur réel** | J'ai 25 tests d'**intégration** qui couvrent les workflows complets côté serveur (login → upload → partage). Pour des tests E2E avec navigateur, il faudrait Selenium ou Playwright, ce qui ajoute de la complexité et du temps d'exécution sans gain critique pour la qualité à cette échelle. |
 | **Pas de monitoring d'erreurs (Sentry, etc.)** | Les logs Python sont suffisants pour un usage familial. Pour la production, j'intégrerais Sentry pour les erreurs et Prometheus + Grafana pour les métriques. |
@@ -223,11 +245,13 @@ brute force, vol de session, fuite RGPD.
 - **Chiffrement automatique** des documents marqués privés (AES Fernet)
 - **Conformité RGPD** documentée, avec export et droit à l'oubli implémentés
 - **307 tests automatisés** dont 25 dédiés à la sécurité et 17 au RGPD
+- **Couverture DICT** : Confidentialité fortement protégée, Intégrité maîtrisée,
+  Disponibilité acceptable, Traçabilité présente (à durcir en V3)
 - **Audit complet** réalisé et tracé dans `POLITIQUE_SECURITE.md` section 10
 
 ### Risques résiduels assumés
-Le risque le plus élevé identifié (M1 : vol d'identifiants, niveau 16) est **largement
-mitigé** par la combinaison bcrypt + 2FA + rate limiting + anti-énumération. Un attaquant
+La seule menace de niveau **Élevé** (M1 : vol d'identifiants, score 16) est **largement
+mitigée** par la combinaison bcrypt + 2FA + rate limiting + anti-énumération. Un attaquant
 externe n'a pratiquement aucune chance d'obtenir un accès sans complicité interne.
 
 ### Pour aller plus loin

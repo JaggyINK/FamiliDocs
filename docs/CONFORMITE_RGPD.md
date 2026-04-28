@@ -1,7 +1,13 @@
-# Conformite RGPD - FamiliDocs
+# Conformité RGPD - FamiliDocs
 
-Audit de la conformite au Reglement General sur la Protection des Donnees (RGPD,
-reglement UE 2016/679 applicable depuis le 25 mai 2018).
+Audit de la conformité au Règlement Général sur la Protection des Données (RGPD,
+règlement UE 2016/679 applicable depuis le 25 mai 2018).
+
+> **Lien avec le référentiel DICT** : le RGPD se concentre principalement sur la
+> **Confidentialité** (C, qui peut accéder aux données ?) et la **Traçabilité** (T,
+> qui a fait quoi et quand ?). L'**Intégrité** (I) est aussi concernée pour le droit
+> de rectification (art. 16). Voir l'analyse complète dans
+> [`ANALYSE_RISQUES.md`](ANALYSE_RISQUES.md) et [`POLITIQUE_SECURITE.md`](POLITIQUE_SECURITE.md).
 
 ---
 
