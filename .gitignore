@@ -50,3 +50,7 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Outils internes (assistants IA, fichiers de suivi perso)
+.claude/
+SUIVI_AUDIT.md
