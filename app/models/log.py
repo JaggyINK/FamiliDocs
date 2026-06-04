@@ -64,7 +64,8 @@ class Log(db.Model):
         'task_complete': 'Tâche terminée',
         'backup_create': 'Sauvegarde créée',
         'backup_restore': 'Restauration effectuée',
-        'document_review': 'Révision document'
+        'document_review': 'Révision document',
+        'desktop_app_download': 'Téléchargement application bureau'
     }
 
     def __repr__(self):

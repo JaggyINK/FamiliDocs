@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Application de bureau - FamiliDocs{% endblock %}
+
+{% block content %}
+<h1 style="font-size: 1.5rem; font-weight: 700;" class="mb-4">Application de bureau</h1>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-pc-display" style="font-size: 2rem;"></i>
+                    <div class="ms-3">
+                        <h2 class="h5 mb-1">FamiliDocs pour Windows</h2>
+                        <div class="text-muted small">
+                            Version native (.exe) — connectee a la meme base de donnees que la version web.
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-muted">
+                    L'application de bureau s'installe sur votre PC Windows. Elle partage les memes
+                    donnees que cette interface web : vos documents, taches et familles sont synchronises.
+                </p>
+
+                {% if available %}
+                <a href="{{ url_for('download.desktop_app_file') }}" class="btn btn-primary">
+                    <i class="bi bi-download"></i> Telecharger {{ filename }}
+                    {% if size_mb %}<span class="ms-1 small">({{ size_mb }} Mo)</span>{% endif %}
+                </a>
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    L'application de bureau n'est pas encore disponible au telechargement.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Installation</h2>
+                <ol class="ps-3 mb-0 text-muted small">
+                    <li class="mb-2">Telechargez le fichier <code>{{ filename }}</code>.</li>
+                    <li class="mb-2">Double-cliquez dessus pour lancer l'application (Windows uniquement).</li>
+                    <li class="mb-2">Connectez-vous avec vos identifiants habituels.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

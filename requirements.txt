@@ -4,6 +4,9 @@ Flask-SQLAlchemy==3.1.1
 Flask-Login==0.6.3
 Flask-WTF==1.2.1
 
+# Serveur WSGI de production (Dokploy / prod)
+gunicorn==23.0.0
+
 # Base de données
 SQLAlchemy==2.0.23
 Flask-Migrate==4.0.5
@@ -33,7 +36,8 @@ schedule==1.2.1
 pyotp==2.9.0
 qrcode[pil]==7.4.2
 
-# Application Desktop Native
-customtkinter==5.2.2
+# Imagerie (QR codes 2FA cote web + avatars)
 pillow==10.4.0
-pyinstaller==6.11.0
+
+# Application Desktop Native : voir requirements-desktop.txt
+# (customtkinter + pyinstaller, non installes sur le serveur web)

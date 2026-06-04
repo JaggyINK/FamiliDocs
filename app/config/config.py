@@ -58,6 +58,9 @@ class Config:
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY') or None
     # Sauvegarde
     BACKUP_FOLDER = os.environ.get('FAMILIDOCS_BACKUP_FOLDER') or os.path.join(USER_DATA_DIR, 'backups')
+    # Telechargement de l'application desktop (.exe depose sur le volume persistant du serveur)
+    DOWNLOAD_FOLDER = os.environ.get('FAMILIDOCS_DOWNLOAD_FOLDER') or os.path.join(USER_DATA_DIR, 'downloads')
+    DESKTOP_APP_FILENAME = os.environ.get('FAMILIDOCS_DESKTOP_FILENAME', 'FamiliDocs.exe')
     # Logs
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     # Categorie de doc
@@ -115,7 +118,10 @@ class ProductionConfig(Config):
     """cfg prod"""
     DEBUG = False
     TESTING = False
-    SESSION_COOKIE_SECURE = True
+    # cookie de session reserve au HTTPS par defaut.
+    # mettre SESSION_COOKIE_SECURE=False si l'app est exposee en HTTP (ex: IP:port sans TLS),
+    # sinon le navigateur n'enverra pas le cookie et la connexion echouera.
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').lower() not in ('false', '0', 'no')
 
     @classmethod
     def init_app(cls, app):

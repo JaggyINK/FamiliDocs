@@ -1,0 +1,7 @@
+# Dependances supplementaires pour construire l'application desktop (.exe)
+# Installation locale : pip install -r requirements-desktop.txt
+# (inclut deja toutes les deps web ci-dessous)
+-r requirements.txt
+
+customtkinter==5.2.2
+pyinstaller==6.11.0

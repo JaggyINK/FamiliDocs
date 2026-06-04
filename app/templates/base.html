@@ -120,6 +120,10 @@
                    class="sidebar-link {{ 'active' if request.endpoint in ['user.activity', 'user.activity_detailed'] }}">
                     <i class="bi bi-clock-history"></i> Historique
                 </a>
+                <a href="{{ url_for('download.desktop_app') }}"
+                   class="sidebar-link {{ 'active' if request.endpoint and 'download.' in request.endpoint }}">
+                    <i class="bi bi-pc-display"></i> Application bureau
+                </a>
             </div>
 
             {% if current_user.is_admin() %}

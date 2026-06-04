@@ -82,7 +82,8 @@ def _setup_logging(app):
 def _create_directories(app):
     upload = app.config.get('UPLOAD_FOLDER')
     backup = app.config.get('BACKUP_FOLDER')
-    for d in [upload, backup, os.path.join(upload, 'avatars') if upload else None]:
+    download = app.config.get('DOWNLOAD_FOLDER')
+    for d in [upload, backup, download, os.path.join(upload, 'avatars') if upload else None]:
         if d and not os.path.exists(d):
             os.makedirs(d, exist_ok=True)
 
@@ -98,9 +99,11 @@ def _register_blueprints(app):
     from app.routes.search_routes import search_bp
     from app.routes.family_routes import family_bp
     from app.routes.message_routes import message_bp
+    from app.routes.download_routes import download_bp
 
     for bp in (auth_bp, user_bp, document_bp, task_bp, admin_bp,
-               notification_bp, version_bp, search_bp, family_bp, message_bp):
+               notification_bp, version_bp, search_bp, family_bp, message_bp,
+               download_bp):
         app.register_blueprint(bp)
 
 
@@ -129,7 +132,9 @@ def _setup_security_headers(app):
             "img-src 'self' data:; "
             "connect-src 'self'"
         )
-        if not app.debug:
+        # HSTS uniquement en HTTPS : l'envoyer en HTTP forcerait le navigateur
+        # a passer en HTTPS et casserait l'acces sur une expo HTTP (IP:port)
+        if not app.debug and app.config.get('SESSION_COOKIE_SECURE'):
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         return response
 
