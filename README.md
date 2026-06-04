@@ -169,11 +169,11 @@ Diagramme detaille : [`docs/uml/composants.png`](docs/uml/composants.png)
 ### Chiffres cles
 
 - **13 modeles** SQLAlchemy = **14 tables** (13 entites + 1 association `document_tags`)
-- **10 blueprints** Flask
+- **11 blueprints** Flask
 - **8 services** metier
-- **50 templates** Jinja2
-- **96 endpoints** HTTP
-- **27 types** d'actions journalisees
+- **51 templates** Jinja2
+- **98 endpoints** HTTP
+- **28 types** d'actions journalisees
 - **12 types** de notifications
 - **8 roles** familiaux
 - **307 tests** automatises (100% passent) repartis en 14 fichiers

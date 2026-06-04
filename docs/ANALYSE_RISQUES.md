@@ -216,18 +216,20 @@ Certains risques ne sont pas remédiés au stade actuel : voici les justificatio
 
 ## 8. Méthodologie
 
-L'analyse de risques a été réalisée avec l'assistance de **Claude Code (Anthropic)**,
-un outil d'analyse de code par IA, pour :
+L'analyse de risques s'appuie sur une démarche inspirée d'**EBIOS Risk Manager**
+(ANSSI), adaptée à la taille du projet :
 
-- Cartographier les actifs et identifier les menaces classiques (OWASP, ANSSI)
-- Croiser les contre-mesures présentes dans le code avec la matrice
-- Vérifier la cohérence entre la politique de sécurité (`POLITIQUE_SECURITE.md`) et
-  les implémentations réelles dans le code
+- **Cartographie des actifs** : modèles SQLAlchemy, services métier, dépendances
+  externes, données personnelles (au sens RGPD)
+- **Identification des menaces** : grille OWASP Top 10, scénarios CNIL/ANSSI
+  pour les coffres-forts numériques familiaux
+- **Cotation** : vraisemblance × gravité, sur une échelle 1-4
+- **Contre-mesures** : croisement avec le code existant et la politique de
+  sécurité (`POLITIQUE_SECURITE.md`)
+- **Plan de traitement** : actions correctives priorisées par niveau de risque
 
-L'utilisation d'un assistant IA pour l'analyse de risques est une pratique en
-émergence dans l'industrie (revue de code automatisée, scan de vulnérabilités).
-Les résultats ont été revus et validés manuellement par le développeur. Voir
-détail dans `docs/POLITIQUE_SECURITE.md` (section 10).
+Voir détail dans `docs/POLITIQUE_SECURITE.md` (section 10) pour la liste des
+remédiations déjà implémentées.
 
 ---
 

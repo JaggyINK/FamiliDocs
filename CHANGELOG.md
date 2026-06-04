@@ -51,7 +51,7 @@ Grosse passe d'audit, nettoyage du code et enrichissement de la documentation.
 - Exception specifique `(IOError, OSError, ValueError)` au lieu de `except Exception` generique dans `document_service`
 
 ### Git
-- `.gitignore` enrichi : `.claude/`, `SUIVI_AUDIT.md`, fichiers de prepa orale en local uniquement
+- `.gitignore` enrichi : fichiers de suivi interne et de prepa orale en local uniquement
 - Retrait du tracking : `venv/`, `__pycache__/`, `.idea/` (etaient commites par erreur)
 - Suppression des anciens .md obsoletes (`BRIEFING_IOS_MAC.md`, `INSTRUCTIONS_API_WINDOWS.md`, `SUIVI_AMELIORATIONS.md`, `TESTS_MANUELS.md`)
 

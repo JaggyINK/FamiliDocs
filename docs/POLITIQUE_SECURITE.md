@@ -178,8 +178,8 @@ Les logs sont automatiquement supprimes apres **180 jours** (configurable via
 
 ## 10. Audit de securite
 
-Un audit complet du projet a ete realise avec l'assistance de **Claude Code (Anthropic)**,
-un outil d'analyse de code par IA. L'audit a couvert :
+Un audit complet du projet a ete realise en suivant les referentiels **OWASP Top 10** et
+les bonnes pratiques **ANSSI**. L'audit a couvert :
 
 - **Failles applicatives classiques (OWASP)** : injection SQL, XSS, CSRF, path traversal,
   injection de chemin Zip-Slip dans la restauration des sauvegardes, IDOR (Insecure Direct
@@ -207,10 +207,6 @@ un outil d'analyse de code par IA. L'audit a couvert :
 Toutes les remediations ont ete validees par les **307 tests automatises** existants et 8
 nouveaux tests dedies a la securite (data minimization RGPD, retention logs, droit a
 l'oubli en cascade, validation des roles).
-
-> **Note** : l'IA a servi d'**outil d'aide a l'audit**. Toutes les decisions techniques,
-> les corrections et les choix d'architecture restent la responsabilite du developpeur,
-> qui maitrise et peut expliquer chaque ligne de code modifiee.
 
 ---
 
